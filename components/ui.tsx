@@ -2,9 +2,7 @@ import React from 'react';
 import clsx from 'clsx';
 
 export function ChipGroup<T extends string>({
-  value,
-  onChange,
-  options,
+  value, onChange, options,
 }: {
   value: T;
   onChange: (v: T) => void;
@@ -19,7 +17,7 @@ export function ChipGroup<T extends string>({
           className={clsx(
             'px-3 py-1.5 rounded-full border text-sm',
             value === o.value
-              ? 'bg-brainster-coral text-white border-transparent'
+              ? 'bg-[var(--brand)] text-white border-transparent'
               : 'bg-white text-neutral-800 border-neutral-300 hover:bg-neutral-50'
           )}
         >
@@ -31,13 +29,7 @@ export function ChipGroup<T extends string>({
 }
 
 export function NumberRow({
-  label,
-  value,
-  onChange,
-  min = 0,
-  step = 1,
-  hint,
-  suffix,
+  label, value, onChange, min = 0, step = 1, hint, suffix,
 }: {
   label: string;
   value: number;
@@ -67,13 +59,7 @@ export function NumberRow({
 }
 
 export function PercentRow({
-  label,
-  value,
-  onChange,
-  min = 0,
-  max = 100,
-  step = 1,
-  hint,
+  label, value, onChange, min = 0, max = 100, step = 1, hint,
 }: {
   label: string;
   value: number;
@@ -111,7 +97,7 @@ export function StepHeader({ current }: { current: 1 | 2 | 3 | 4 }) {
         <div key={t} className={`step ${i + 1 <= current ? 'step-active' : ''}`}>
           <div
             className={`w-6 h-6 rounded-full flex items-center justify-center border ${
-              i + 1 <= current ? 'bg-brainster-coral text-white border-transparent' : 'border-neutral-300'
+              i + 1 <= current ? 'bg-[var(--brand)] text-white border-transparent' : 'border-neutral-300'
             }`}
           >
             {i + 1}
