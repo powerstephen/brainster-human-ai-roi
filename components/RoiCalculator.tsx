@@ -374,4 +374,159 @@ export function RoiCalculator() {
               />
               <NumberRow
                 label={`Training cost per employee (${CURRENCY})`}
-                value={trainingCostPer
+                value={trainingCostPerEmployee}
+                onChange={setTrainingCostPerEmployee}
+                min={0}
+                step={25}
+              />
+              <NumberRow
+                label={`Additional platform spend / month (${CURRENCY})`}
+                value={platformSpendMonthly}
+                onChange={setPlatformSpendMonthly}
+                min={0}
+                step={50}
+              />
+              <NumberRow
+                label="Program duration (months)"
+                value={durationMonths}
+                onChange={setDurationMonths}
+                min={1}
+                step={1}
+              />
+            </div>
+
+            {/* Pain-specific inputs */}
+            <div className="pt-2">
+              <h4 className="font-semibold mb-2">Pain-specific</h4>
+              {PainBlock()}
+            </div>
+
+            <div className="flex gap-2">
+              <button className="btn btn-ghost" onClick={() => setStep(2)}>
+                ← Back
+              </button>
+              <button className="btn btn-primary" onClick={() => setStep(4)}>
+                Calculate Results →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4 — Results */}
+        {step === 4 && (
+          <div className="space-y-4">
+            {/* KPIs */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="card p-4">
+                <div className="text-xs text-neutral-500">Monthly savings</div>
+                <div className="text-lg font-semibold">{fmtCurrency(res.monthlySavings)}</div>
+              </div>
+              <div className="card p-4">
+                <div className="text-xs text-neutral-500">Payback</div>
+                <div className="text-lg font-semibold">
+                  {isFinite(res.paybackMonths) ? `${res.paybackMonths.toFixed(1)} mo` : '—'}
+                </div>
+              </div>
+              <div className="card p-4">
+                <div className="text-xs text-neutral-500">Annual ROI</div>
+                <div className="text-lg font-semibold">{res.roiMultiple.toFixed(1)}×</div>
+              </div>
+              <div className="card p-4">
+                <div className="text-xs text-neutral-500">Hours saved / person / week</div>
+                <div className="text-lg font-semibold">{res.hoursSavedPerPersonWeek.toFixed(1)} hrs</div>
+              </div>
+              <div className="card p-4">
+                <div className="text-xs text-neutral-500">AAC (AI-adjusted contribution)</div>
+                <div className="text-lg font-semibold">+{res.aacLiftPct.toFixed(0)}%</div>
+              </div>
+            </div>
+
+            {/* Dividend breakdown */}
+            <div className="card p-4 space-y-2">
+              <h3 className="text-lg font-semibold">Annual AI Dividend</h3>
+              <p className="text-sm text-neutral-700">
+                Your teams reclaim <strong>{Math.round(res.annualHoursSavedTotal).toLocaleString()}</strong> hours annually — equal to{' '}
+                <strong>{fmtCurrency(res.annualValue)}</strong> in reinvested value.
+              </p>
+              <div className="grid md:grid-cols-4 gap-3 mt-2">
+                <div className="card p-3">
+                  <div className="text-xs text-neutral-500">Time</div>
+                  <div className="text-lg font-semibold">{fmtCurrency(res.timeDividend)}</div>
+                </div>
+                <div className="card p-3">
+                  <div className="text-xs text-neutral-500">Quality</div>
+                  <div className="text-lg font-semibold">{fmtCurrency(res.qualityDividend)}</div>
+                </div>
+                <div className="card p-3">
+                  <div className="text-xs text-neutral-500">Retention</div>
+                  <div className="text-lg font-semibold">{fmtCurrency(res.retentionDividend)}</div>
+                </div>
+                <div className="card p-3">
+                  <div className="text-xs text-neutral-500">Hiring deferral</div>
+                  <div className="text-lg font-semibold">{fmtCurrency(res.hiringDividend)}</div>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-3 mt-2">
+                <div className="card p-3">
+                  <div className="text-xs text-neutral-500">Training investment</div>
+                  <div className="text-lg font-semibold">{fmtCurrency(res.trainingInvestment)}</div>
+                </div>
+                <div className="card p-3">
+                  <div className="text-xs text-neutral-500">Platform spend (annual)</div>
+                  <div className="text-lg font-semibold">{fmtCurrency(res.platformInvestment)}</div>
+                </div>
+                <div className="card p-3">
+                  <div className="text-xs text-neutral-500">Total investment</div>
+                  <div className="text-lg font-semibold">{fmtCurrency(res.totalInvestment)}</div>
+                </div>
+              </div>
+
+              <p className="help">
+                We cap post-training effective savings at 50% of repetitive time for credibility. Maturity controls ramp and ceiling.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="card p-4 space-y-3">
+              <h3 className="text-lg font-semibold">What we recommend</h3>
+              <p className="text-sm text-neutral-700">
+                Start with a focused cohort aligned to <strong>{pain.replace('_', ' ')}</strong> → document workflows & wins → scale.
+                We can package this into a CFO-ready one-pager.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button className="btn btn-primary">Generate Proposal (PDF)</button>
+                <button className="btn btn-ghost">Book a 20-min ROI Review</button>
+                <button className="btn btn-ghost">Email me this model</button>
+              </div>
+              <div className="text-xs text-neutral-500">
+                Top driver: <strong>{res.topDriver.label}</strong> ({Math.round(res.topDriver.share * 100)}% of value)
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button className="btn btn-ghost" onClick={() => setStep(3)}>
+                ← Back
+              </button>
+              <button className="btn btn-primary" onClick={() => setStep(1)}>
+                Start over
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Sticky right-rail */}
+      <LiveSummary
+        employees={employees}
+        trainedEmployees={trainedEmployees}
+        trainingCostTotal={trainingCostTotal}
+        monthlySavings={res.monthlySavings}
+        paybackMonths={res.paybackMonths}
+        roiMultiple={res.roiMultiple}
+        topDriverLabel={res.topDriver.label}
+        topDriverShare={res.topDriver.share}
+      />
+    </div>
+  );
+}
