@@ -2,7 +2,9 @@ import React from 'react';
 import clsx from 'clsx';
 
 export function ChipGroup<T extends string>({
-  value, onChange, options,
+  value,
+  onChange,
+  options,
 }: {
   value: T;
   onChange: (v: T) => void;
@@ -28,8 +30,56 @@ export function ChipGroup<T extends string>({
   );
 }
 
+export function MultiChipGroup<T extends string>({
+  values,
+  onChange,
+  options,
+  max = 3,
+}: {
+  values: T[];
+  onChange: (v: T[]) => void;
+  options: { label: string; value: T }[];
+  max?: number;
+}) {
+  const toggle = (val: T) => {
+    const exists = values.includes(val);
+    if (exists) onChange(values.filter((v) => v !== val));
+    else if (values.length < max) onChange([...values, val]);
+  };
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((o) => {
+        const active = values.includes(o.value);
+        const disabled = !active && values.length >= max;
+        return (
+          <button
+            key={o.value}
+            onClick={() => toggle(o.value)}
+            disabled={disabled}
+            className={clsx(
+              'px-3 py-1.5 rounded-full border text-sm',
+              active
+                ? 'bg-[var(--brand)] text-white border-transparent'
+                : 'bg-white text-neutral-800 border-neutral-300 hover:bg-neutral-50',
+              disabled && 'opacity-40 cursor-not-allowed'
+            )}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function NumberRow({
-  label, value, onChange, min = 0, step = 1, hint, suffix,
+  label,
+  value,
+  onChange,
+  min = 0,
+  step = 1,
+  hint,
+  suffix,
 }: {
   label: string;
   value: number;
@@ -59,7 +109,13 @@ export function NumberRow({
 }
 
 export function PercentRow({
-  label, value, onChange, min = 0, max = 100, step = 1, hint,
+  label,
+  value,
+  onChange,
+  min = 0,
+  max = 100,
+  step = 1,
+  hint,
 }: {
   label: string;
   value: number;
@@ -90,7 +146,7 @@ export function PercentRow({
 }
 
 export function StepHeader({ current }: { current: 1 | 2 | 3 | 4 }) {
-  const items = ['Persona', 'Pain', 'Inputs', 'Results'];
+  const items = ['Persona', 'Areas to improve', 'Inputs', 'Results'];
   return (
     <div className="flex items-center gap-4 text-sm mb-4">
       {items.map((t, i) => (
