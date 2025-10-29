@@ -1,11 +1,51 @@
 import React from 'react';
 import clsx from 'clsx';
 
-export function NumberRow({
-  label, value, onChange, min = 0, step = 1, hint, suffix
+export function ChipGroup<T extends string>({
+  value,
+  onChange,
+  options,
 }: {
-  label: string; value: number; onChange: (n: number) => void;
-  min?: number; step?: number; hint?: string; suffix?: string;
+  value: T;
+  onChange: (v: T) => void;
+  options: { label: string; value: T }[];
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          onClick={() => onChange(o.value)}
+          className={clsx(
+            'px-3 py-1.5 rounded-full border text-sm',
+            value === o.value
+              ? 'bg-brainster-coral text-white border-transparent'
+              : 'bg-white text-neutral-800 border-neutral-300 hover:bg-neutral-50'
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function NumberRow({
+  label,
+  value,
+  onChange,
+  min = 0,
+  step = 1,
+  hint,
+  suffix,
+}: {
+  label: string;
+  value: number;
+  onChange: (n: number) => void;
+  min?: number;
+  step?: number;
+  hint?: string;
+  suffix?: string;
 }) {
   return (
     <div className="space-y-1">
@@ -27,10 +67,21 @@ export function NumberRow({
 }
 
 export function PercentRow({
-  label, value, onChange, min = 0, max = 100, step = 1, hint
+  label,
+  value,
+  onChange,
+  min = 0,
+  max = 100,
+  step = 1,
+  hint,
 }: {
-  label: string; value: number; onChange: (n: number) => void;
-  min?: number; max?: number; step?: number; hint?: string;
+  label: string;
+  value: number;
+  onChange: (n: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  hint?: string;
 }) {
   return (
     <div className="space-y-1">
@@ -52,29 +103,8 @@ export function PercentRow({
   );
 }
 
-export function Segmented<T extends string>({
-  value, onChange, options
-}: {
-  value: T; onChange: (v: T) => void;
-  options: { label: string; value: T }[];
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          onClick={() => onChange(o.value)}
-          className={clsx('btn', value === o.value ? 'btn-primary' : 'btn-ghost')}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 export function StepHeader({ current }: { current: 1 | 2 | 3 | 4 }) {
-  const items = ['Workforce', 'Maturity', 'Investment', 'Results'];
+  const items = ['Persona', 'Pain', 'Inputs', 'Results'];
   return (
     <div className="flex items-center gap-4 text-sm mb-4">
       {items.map((t, i) => (
