@@ -10,6 +10,8 @@ export function LiveSummary({
   monthlySavings,
   paybackMonths,
   roiMultiple,
+  topDriverLabel,
+  topDriverShare,
 }: {
   employees: number;
   trainedEmployees: number;
@@ -17,6 +19,8 @@ export function LiveSummary({
   monthlySavings: number;
   paybackMonths: number;
   roiMultiple: number;
+  topDriverLabel: string;
+  topDriverShare: number;
 }) {
   const items = [
     { k: 'Employees in scope', v: employees.toLocaleString() },
@@ -30,9 +34,6 @@ export function LiveSummary({
   return (
     <aside className="card p-4 space-y-3 h-fit sticky top-6">
       <h3 className="text-lg font-semibold">Live Business Case</h3>
-      <p className="text-sm text-neutral-600">
-        Updates as you adjust inputs. Values are <em>incremental vs today</em>.
-      </p>
       <div className="grid grid-cols-1 gap-2">
         {items.map((it) => (
           <div key={it.k} className="card p-3">
@@ -40,6 +41,12 @@ export function LiveSummary({
             <div className="text-lg font-semibold">{it.v}</div>
           </div>
         ))}
+      </div>
+      <div className="card p-3">
+        <div className="text-xs text-neutral-500">Top driver</div>
+        <div className="text-sm">
+          <strong>{topDriverLabel}</strong> ({Math.round(topDriverShare * 100)}% of value)
+        </div>
       </div>
     </aside>
   );
