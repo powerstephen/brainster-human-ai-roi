@@ -4,14 +4,8 @@ const fmtCurrency = (n: number) =>
   new Intl.NumberFormat('en', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
 
 export function LiveSummary({
-  employees,
-  trainedEmployees,
-  trainingCostTotal,
-  monthlySavings,
-  paybackMonths,
-  roiMultiple,
-  topDriverLabel,
-  topDriverShare,
+  employees, trainedEmployees, trainingCostTotal, monthlySavings, paybackMonths, roiMultiple,
+  topDriverLabel, topDriverShare,
 }: {
   employees: number;
   trainedEmployees: number;
