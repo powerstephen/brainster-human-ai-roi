@@ -13,6 +13,8 @@ const fmtCurrency = (n: number) =>
 
 export function RoiCalculator() {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+
+  // Persona
   const [persona, setPersona] = useState<Persona>('head_ld');
   const personaOptions = [
     { label: 'Head of L&D', value: 'head_ld' as const },
@@ -22,7 +24,12 @@ export function RoiCalculator() {
     { label: 'CX Lead', value: 'cx_lead' as const },
     { label: 'Marketing Lead', value: 'mkt_lead' as const },
   ];
+  const defaultPainByPersona: Record<Persona, Pain> = {
+    head_ld: 'upskilling', chro: 'retention', people_ops: 'engagement',
+    coo: 'productivity', cx_lead: 'quality', mkt_lead: 'productivity'
+  };
 
+  // Pain
   const [pain, setPain] = useState<Pain>('productivity');
   const painOptions = [
     { label: 'Staff retention', value: 'retention' as const },
@@ -32,10 +39,6 @@ export function RoiCalculator() {
     { label: 'Quality & rework', value: 'quality' as const },
     { label: 'Hiring deferral', value: 'hiring' as const },
   ];
-  const defaultPainByPersona: Record<Persona, Pain> = {
-    head_ld: 'upskilling', chro: 'retention', people_ops: 'engagement',
-    coo: 'productivity', cx_lead: 'quality', mkt_lead: 'productivity'
-  };
 
   // Global
   const [employees, setEmployees] = useState(200);
@@ -83,7 +86,7 @@ export function RoiCalculator() {
             <PercentRow label="Baseline attrition (%)" value={p.baselineAttritionPct ?? 16}
               onChange={(v) => setP({ ...p, baselineAttritionPct: v })} min={5} max={35} />
             <NumberRow label="Expected change (points)" value={p.attritionImprovementPts ?? 2}
-              onChange={(v) => setP({ ...p, attritionImprovementPts: v })} step={0.5} />
+              onChange={(v) => setP({ ...p, attritionImprovementPts: v })} step={0.5} hint="Reduction after training." />
             <NumberRow label="Replacement cost factor (× annual salary)" value={p.replacementCostFactor ?? 0.6}
               onChange={(v) => setP({ ...p, replacementCostFactor: v })} step={0.1} />
             <NumberRow label={`Average annual salary (${CURRENCY})`} value={p.annualSalary ?? Math.round(hourlyCost * weeklyHours * 52)}
@@ -107,7 +110,7 @@ export function RoiCalculator() {
             <NumberRow label="eNPS lift (points)" value={p.eNpsLiftPts ?? 8}
               onChange={(v) => setP({ ...p, eNpsLiftPts: v })} />
             <NumberRow label="Attrition points per +10 eNPS" value={p.attritionPtsPer10Enps ?? 2}
-              onChange={(v) => setP({ ...p, attritionPtsPer10Enps: v })} step={0.5} />
+              onChange={(v) => setP({ ...p, attritionPtsPer10Enps: v })} step={0.5} hint="Converts eNPS → attrition drop." />
           </div>
         );
       case 'quality':
@@ -150,6 +153,7 @@ export function RoiCalculator() {
       <div className="space-y-5">
         <StepHeader current={step} />
 
+        {/* Step 1 — Persona */}
         {step === 1 && (
           <div className="card p-6 space-y-4">
             <h3 className="text-lg font-semibold">Who are you?</h3>
@@ -167,6 +171,7 @@ export function RoiCalculator() {
           </div>
         )}
 
+        {/* Step 2 — Pain */}
         {step === 2 && (
           <div className="card p-6 space-y-4">
             <h3 className="text-lg font-semibold">What’s the primary pain?</h3>
@@ -178,6 +183,7 @@ export function RoiCalculator() {
           </div>
         )}
 
+        {/* Step 3 — Inputs */}
         {step === 3 && (
           <div className="card p-6 space-y-4">
             <h3 className="text-lg font-semibold">Inputs</h3>
@@ -205,6 +211,7 @@ export function RoiCalculator() {
           </div>
         )}
 
+        {/* Step 4 — Results */}
         {step === 4 && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -214,6 +221,7 @@ export function RoiCalculator() {
               <div className="card p-4"><div className="text-xs text-neutral-500">Hours saved / person / week</div><div className="text-lg font-semibold">{res.hoursSavedPerPersonWeek.toFixed(1)} hrs</div></div>
               <div className="card p-4"><div className="text-xs text-neutral-500">AAC (AI-adjusted contribution)</div><div className="text-lg font-semibold">+{res.aacLiftPct.toFixed(0)}%</div></div>
             </div>
+
             <div className="card p-4 space-y-2">
               <h3 className="text-lg font-semibold">Annual AI Dividend</h3>
               <p className="text-sm text-neutral-700">
@@ -226,6 +234,11 @@ export function RoiCalculator() {
                 <div className="card p-3"><div className="text-xs text-neutral-500">Hiring deferral</div><div className="text-lg font-semibold">{fmtCurrency(res.hiringDividend)}</div></div>
               </div>
               <div className="text-xs text-neutral-500">Top driver: <strong>{res.topDriver.label}</strong> ({Math.round(res.topDriver.share * 100)}% of value)</div>
+            </div>
+
+            <div className="flex gap-2">
+              <button className="btn btn-ghost" onClick={() => setStep(3)}>← Back</button>
+              <button className="btn btn-primary" onClick={() => setStep(1)}>Start over</button>
             </div>
           </div>
         )}
