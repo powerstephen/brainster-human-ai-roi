@@ -42,7 +42,7 @@ body{
 .btn-light{background:#F8FAFF; border:1px solid var(--line); color:#1F2A56}
 .btn:disabled{opacity:.55; cursor:not-allowed}
 
-/* HERO (slim) */
+/* HERO (slim, with stats inside) */
 .hero{
   border-radius:18px; overflow:hidden;
   box-shadow:0 14px 40px rgba(14,40,120,.16);
@@ -52,35 +52,34 @@ body{
     radial-gradient(900px 500px at 90% 10%, rgba(26,64,240,.18), transparent),
     linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 60%, #0B1C60 100%);
 }
-
-/* shorter hero so inputs appear higher */
-.hero--slim{
-  margin:18px 0 12px;
-}
-.hero-inner--slim{
-  padding:22px 22px;   /* reduced from ~42px */
-}
+.hero--slim{ margin:18px 0 16px; }
+.hero-inner--slim{ padding:22px 22px 16px; }
 .hero-inner--slim h1{
   margin:0 0 6px; font-size:34px; line-height:1.06; font-weight:900; letter-spacing:-.02em;
 }
-.hero-inner--slim p{
-  margin:0; opacity:.98; font-size:16px;
-}
+.hero-inner--slim p{ margin:0; opacity:.98; font-size:16px; }
 
-/* STAT ROW under hero (single row on desktop) */
-.stats-row{
-  display:grid; gap:10px; margin:8px 0 12px;
+/* Hero stats area (inside blue) */
+.hero-stats{ margin-top:14px; }
+.hero-stats-head{
+  font-size:12px; letter-spacing:.08em; text-transform:uppercase; font-weight:900;
+  color:rgba(255,255,255,.92); opacity:.95; margin:0 0 8px;
+}
+.hero-stats-grid{
+  display:grid; gap:10px;
   grid-template-columns:repeat(2,minmax(0,1fr));
 }
 @media (min-width: 960px){
-  .stats-row{ grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .hero-stats-grid{ grid-template-columns:repeat(4,minmax(0,1fr)); }
 }
-.stat-tile{
-  background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px;
-  box-shadow:0 8px 24px rgba(12,20,38,.06);
+.hero-stat-tile{
+  background:linear-gradient(180deg, rgba(255,255,255,.25) 0%, rgba(255,255,255,.08) 100%);
+  border:1px solid rgba(255,255,255,.35);
+  border-radius:14px; padding:12px;
+  box-shadow:0 10px 28px rgba(6,18,70,.22) inset;
 }
-.stat-tile .t{font-size:.78rem; color:#64748B; font-weight:800}
-.stat-tile .v{font-weight:900; font-size:1.05rem; color:#0E1320}
+.hero-stat-tile .t{font-size:.78rem; color:#EEF2FF; font-weight:800}
+.hero-stat-tile .v{font-weight:900; font-size:1.05rem; color:#ffffff}
 
 /* SECTIONS */
 .section{margin:22px 0}
@@ -133,6 +132,21 @@ body{
 .tooltip{position:relative;display:inline-flex;align-items:center;gap:.35rem;font-size:.9rem}
 .tooltip .tip{position:absolute;top:120%;left:0;z-index:5;min-width:260px;background:#0B0F19;color:#fff;padding:.62rem .72rem;border-radius:10px;box-shadow:0 8px 20px rgba(10,22,70,.22);display:none}
 .tooltip:hover .tip{display:block}
+
+/* MATURITY SCALE (1–10 clickable) */
+.maturity-scale{
+  display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;
+}
+.maturity-scale .n{
+  width:34px; height:34px; border-radius:10px; border:1px solid var(--line);
+  display:flex; align-items:center; justify-content:center; font-weight:900; cursor:pointer;
+  background:#fff;
+}
+.maturity-scale .n.active{
+  color:#fff; border-color:transparent;
+  background:linear-gradient(90deg,#6D8BFF,#3366FE);
+  box-shadow:0 8px 20px rgba(31,77,255,.20);
+}
 
 /* PRINT VIEW */
 @media print{
