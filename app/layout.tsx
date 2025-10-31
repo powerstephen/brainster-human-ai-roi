@@ -15,11 +15,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="nav">
           <div className="container nav-inner">
             <div className="brand">
-              <span className="dot" />
+              <span className="brand-dot" />
               <span>Brainster · AI at Work</span>
               <span className="badge">Vivid Blue</span>
             </div>
-            <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <div style={{display:'flex',gap:8}}>
               <a className="btn btn-ghost" href="#" aria-disabled>About</a>
               <a className="btn btn-primary" href="/report" title="Open print view">Print / PDF</a>
             </div>
