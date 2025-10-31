@@ -1,5 +1,4 @@
 export type Team = 'marketing'|'hr'|'ops'|'sales'|'support'|'product';
-export type Maturity = 'low'|'medium'|'high';
 export type Currency = 'EUR'|'USD'|'GBP';
 export type Pain = 'retention'|'engagement'|'quality'|'throughput'|'onboarding'|'cost';
 
@@ -54,7 +53,7 @@ export function calc(i: Inputs): Results {
   const adopters = i.employees * trainedShare;
 
   const salaryPerHour = i.avgSalary / (52*40);
-  const hoursYear = i.hoursSavedPerWeek * 52 * adopters * (1 - base.adoption*0.4); // shave gains if already mature
+  const hoursYear = i.hoursSavedPerWeek * 52 * adopters * (1 - base.adoption*0.4); // discount gains if already mature
   const timeValue = hoursYear * salaryPerHour;
 
   // retention value (avoid backfill ~60% salary)
@@ -69,4 +68,34 @@ export function calc(i: Inputs): Results {
   const roiMultiple = totalInvestment>0 ? annualValue / totalInvestment : 0;
 
   return { monthlySavings, annualValue, retentionValue, hoursTotalYear: hoursYear, paybackMonths, roiMultiple };
+}
+
+/* ---------- shareable link helpers ---------- */
+export function encodeInputs(i: Inputs): string {
+  const q = new URLSearchParams();
+  Object.entries(i).forEach(([k,v])=>{
+    if (Array.isArray(v)) q.set(k, v.join(','));
+    else q.set(k, String(v));
+  });
+  return q.toString();
+}
+export function decodeInputs(search: string, fallback: Inputs): Inputs {
+  const q = new URLSearchParams(search);
+  const val = (k:string)=> q.get(k);
+  const pickNumber = (k:string, d:number)=> {
+    const v = Number(val(k)); return Number.isFinite(v) ? v : d;
+  };
+  const pickArray = (k:string)=> (val(k)?.split(',').filter(Boolean) ?? []) as Pain[];
+  return {
+    currency: (val('currency') as Currency) ?? fallback.currency,
+    team: (val('team') as Team) ?? fallback.team,
+    maturityScore: pickNumber('maturityScore', fallback.maturityScore),
+    employees: pickNumber('employees', fallback.employees),
+    avgSalary: pickNumber('avgSalary', fallback.avgSalary),
+    hoursSavedPerWeek: pickNumber('hoursSavedPerWeek', fallback.hoursSavedPerWeek),
+    retentionImprovementPts: pickNumber('retentionImprovementPts', fallback.retentionImprovementPts),
+    trainingPerEmployee: pickNumber('trainingPerEmployee', fallback.trainingPerEmployee),
+    durationMonths: pickNumber('durationMonths', fallback.durationMonths),
+    pains: pickArray('pains').length ? pickArray('pains') : fallback.pains,
+  };
 }
