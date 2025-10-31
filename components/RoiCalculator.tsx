@@ -46,13 +46,12 @@ const TEAMS: { label: string; value: Team }[] = [
 
 /** suggest hours saved based on team baseline + maturity headroom */
 function suggestHours(team: Team, maturityScore: number): number {
-  const base = teamPresets(team).hours; // e.g., support 4.5, marketing 3.5, etc.
+  const base = teamPresets(team).hours;
   let m = 1.0;
-  if (maturityScore <= 3) m = 1.25;        // low maturity → more upside than base
-  else if (maturityScore <= 6) m = 1.0;    // mid
-  else if (maturityScore <= 8) m = 0.75;   // high
-  else m = 0.55;                            // very high maturity → less upside
-  // round to nearest 0.5
+  if (maturityScore <= 3) m = 1.25;
+  else if (maturityScore <= 6) m = 1.0;
+  else if (maturityScore <= 8) m = 0.75;
+  else m = 0.55;
   return Math.max(0, Math.round((base * m) * 2) / 2);
 }
 
@@ -81,9 +80,10 @@ export function RoiCalculator() {
   const [employees, setEmployees] = useState<number>(150);
   const [avgSalary, setAvgSalary] = useState<number>(52000);
 
-  // retention
-  const [retentionImprovementPts, setRetentionImprovementPts] =
-    useState<number>(2);
+  // retention (new)
+  const [baselineTurnoverPct, setBaselineTurnoverPct] = useState<number>(teamPresets('hr').baselineTurnoverPct);
+  const [turnoverImprovementPct, setTurnoverImprovementPct] = useState<number>(10); // 10% relative improvement default
+  const [replacementCostFactor, setReplacementCostFactor] = useState<number>(0.5); // 50% of salary default
 
   // pain points
   const [pains, setPains] = useState<Pain[]>([]);
@@ -92,11 +92,11 @@ export function RoiCalculator() {
   const [trainingPerEmployee, setTrainingPerEmployee] = useState<number>(850);
   const [durationMonths, setDurationMonths] = useState<number>(3);
 
-  // presets when team changes → reset hours with maturity suggestion unless user overrode
+  // adjust hours + baseline turnover when team changes
   useEffect(() => {
     const p = teamPresets(team);
-    const suggested = suggestHours(team, maturityScore);
-    if (!userTouchedHours.current) setHoursSavedPerWeek(suggested || p.hours);
+    if (!userTouchedHours.current) setHoursSavedPerWeek(suggestHours(team, maturityScore));
+    setBaselineTurnoverPct(p.baselineTurnoverPct);
   }, [team]);
 
   // when maturity changes → auto adjust hours unless user manually changed
@@ -113,7 +113,11 @@ export function RoiCalculator() {
     employees,
     avgSalary,
     hoursSavedPerWeek,
-    retentionImprovementPts,
+
+    baselineTurnoverPct,
+    turnoverImprovementPct,
+    replacementCostFactor,
+
     trainingPerEmployee,
     durationMonths,
     pains,
@@ -121,6 +125,7 @@ export function RoiCalculator() {
 
   const S = symbol(currency);
   const res = useMemo(() => calc(inputs), [inputs]);
+
   const money = (n: number) =>
     new Intl.NumberFormat('en', {
       style: 'currency',
@@ -170,7 +175,11 @@ export function RoiCalculator() {
       ['employees', inputs.employees],
       ['avgSalary', inputs.avgSalary],
       ['hoursSavedPerWeek', inputs.hoursSavedPerWeek],
-      ['retentionImprovementPts', inputs.retentionImprovementPts],
+
+      ['baselineTurnoverPct', inputs.baselineTurnoverPct],
+      ['turnoverImprovementPct', inputs.turnoverImprovementPct],
+      ['replacementCostFactor', inputs.replacementCostFactor],
+
       ['trainingPerEmployee', inputs.trainingPerEmployee],
       ['durationMonths', inputs.durationMonths],
       ['pains', inputs.pains.join('|')],
@@ -255,7 +264,7 @@ export function RoiCalculator() {
                 ))}
               </select>
               <p className="help">
-                We load sensible defaults per team (time-saved & retention impact).
+                We load sensible defaults per team (time-saved & turnover baseline).
               </p>
             </div>
             <CurrencySelect value={currency} onChange={setCurrency} />
@@ -341,21 +350,41 @@ export function RoiCalculator() {
         </div>
       )}
 
-      {/* 4 RETENTION */}
+      {/* 4 RETENTION (new inputs) */}
       {step === 4 && (
         <div className="card">
           <h3>
             <IconPeople /> Retention impact
           </h3>
-          <NumberField
-            label="Attrition reduction (percentage points)"
-            value={retentionImprovementPts}
-            onChange={setRetentionImprovementPts}
-            min={0}
-            step={0.5}
-            suffix="pts"
-            hint="Training + engagement often yields 1–4 points improvement."
-          />
+          <div style={{display:'grid', gap:12, gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))'}}>
+            <NumberField
+              label="Baseline annual turnover (%)"
+              value={baselineTurnoverPct}
+              onChange={setBaselineTurnoverPct}
+              min={0}
+              step={1}
+              suffix="%"
+              hint="Typical ranges: 15–30% depending on team."
+            />
+            <NumberField
+              label="Expected improvement (%)"
+              value={turnoverImprovementPct}
+              onChange={setTurnoverImprovementPct}
+              min={0}
+              step={1}
+              suffix="%"
+              hint="Relative reduction. 10% means 20% → 18% turnover."
+            />
+            <NumberField
+              label="Replacement cost as % of salary"
+              value={Math.round(replacementCostFactor * 100)}
+              onChange={(v) => setReplacementCostFactor((v || 0) / 100)}
+              min={0}
+              step={5}
+              suffix="%"
+              hint="Common rule: ~50% of salary (recruiting, onboarding, lost productivity)."
+            />
+          </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
             <button className="btn btn-ghost" onClick={() => setStep(3)}>
               ← Back
