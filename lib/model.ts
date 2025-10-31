@@ -1,16 +1,43 @@
 export type Team = 'marketing'|'hr'|'ops'|'sales'|'support'|'product';
 export type Maturity = 'low'|'medium'|'high';
+export type Currency = 'EUR'|'USD'|'GBP';
+export type Pain = 'retention'|'engagement'|'quality'|'throughput'|'onboarding'|'cost';
 
 export type Inputs = {
+  currency: Currency;
   team: Team;
-  maturity: Maturity;
+  maturityScore: number;           // 1–10 slider
   employees: number;
-  avgSalary: number;      // annual, €
-  hoursSavedPerWeek: number; // per person
+  avgSalary: number;               // annual in selected currency
+  hoursSavedPerWeek: number;       // numeric per person
   retentionImprovementPts: number; // attrition points reduced
-  trainingPerEmployee: number; // €
+  trainingPerEmployee: number;     // per head
   durationMonths: number;
+  pains: Pain[];                   // selected pains
 };
+
+/** basic currency symbol */
+export const symbol = (c:Currency)=> c==='USD'?'$' : c==='GBP'?'£' : '€';
+
+export function maturityBaseline(score:number){
+  // translate 1–10 into adoption baseline we subtract from modeled gains
+  if(score<=3) return { adoption:0.1 };
+  if(score<=6) return { adoption:0.3 };
+  if(score<=8) return { adoption:0.5 };
+  return { adoption:0.7 };
+}
+
+export function teamPresets(team: Team){
+  // sensible defaults per function (hours saved & retention impact tendencies)
+  switch(team){
+    case 'support':  return { hours:4.5, retentionPts:2.0 };
+    case 'marketing':return { hours:3.5, retentionPts:1.5 };
+    case 'sales':    return { hours:2.5, retentionPts:1.0 };
+    case 'ops':      return { hours:3.0, retentionPts:1.5 };
+    case 'hr':       return { hours:2.0, retentionPts:2.0 };
+    case 'product':  return { hours:2.0, retentionPts:1.0 };
+  }
+}
 
 export type Results = {
   monthlySavings: number;
@@ -21,44 +48,25 @@ export type Results = {
   roiMultiple: number;
 };
 
-export function maturityBaseline(m: Maturity){
-  if(m==='low') return { adoption: 0.1, cap: 0.2 };
-  if(m==='medium') return { adoption: 0.35, cap: 0.35 };
-  return { adoption: 0.6, cap: 0.5 };
-}
+export function calc(i: Inputs): Results {
+  const base = maturityBaseline(i.maturityScore);
+  const trainedShare = 0.7;         // coverage of the program
+  const adopters = i.employees * trainedShare;
 
-export function calc(inputs: Inputs): Results {
-  const { maturity, employees, avgSalary, hoursSavedPerWeek, retentionImprovementPts, trainingPerEmployee, durationMonths } = inputs;
-  const base = maturityBaseline(maturity);
-
-  // We count only incremental adoption beyond baseline
-  const trainedShare = 0.7; // default training coverage assumption
-  const adopters = employees * trainedShare; // those we expect to use AI after the program
-
-  const salaryPerHour = avgSalary / (52*40);
-  const hoursYear = hoursSavedPerWeek * 52 * adopters;
+  const salaryPerHour = i.avgSalary / (52*40);
+  const hoursYear = i.hoursSavedPerWeek * 52 * adopters * (1 - base.adoption*0.4); // shave gains if already mature
   const timeValue = hoursYear * salaryPerHour;
 
-  // Retention value (avoid replacement). Replacement ~0.6× salary
-  const avoided = Math.min(employees * (retentionImprovementPts/100), employees * 0.25);
-  const retentionValue = avoided * (avgSalary * 0.6);
+  // retention value (avoid backfill ~60% salary)
+  const avoided = Math.min(i.employees * (i.retentionImprovementPts/100), i.employees * 0.25);
+  const retentionValue = avoided * (i.avgSalary * 0.6);
 
   const annualValue = timeValue + retentionValue;
-
-  const trainingInvestment = employees * trainedShare * trainingPerEmployee;
-  const platformSpend = 0; // keep simple; wire in later if needed
-  const totalInvestment = trainingInvestment + platformSpend;
+  const totalInvestment = trainedShare * i.employees * i.trainingPerEmployee;
 
   const monthlySavings = annualValue/12;
   const paybackMonths = monthlySavings>0 ? totalInvestment / monthlySavings : Infinity;
   const roiMultiple = totalInvestment>0 ? annualValue / totalInvestment : 0;
 
-  return {
-    monthlySavings,
-    annualValue,
-    retentionValue,
-    hoursTotalYear: hoursYear,
-    paybackMonths,
-    roiMultiple,
-  };
+  return { monthlySavings, annualValue, retentionValue, hoursTotalYear: hoursYear, paybackMonths, roiMultiple };
 }
