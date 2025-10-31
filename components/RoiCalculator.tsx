@@ -1,7 +1,9 @@
 'use client';
 import { useMemo, useState, useEffect } from 'react';
-import { calc, Inputs, Team, Currency, symbol, teamPresets } from '../lib/model';
+import { calc, Inputs, Team, Currency, symbol, teamPresets, encodeInputs } from '../lib/model';
 import { CurrencySelect, MultiPick, NumberField, MaturitySlider } from './controls';
+import NextSteps from './NextSteps';
+import { IconTeam, IconGauge, IconMoney, IconClock, IconPeople, IconSpark } from './icons';
 
 const PAIN_OPTS = [
   { label:'Staff retention', value:'retention' as const },
@@ -77,26 +79,56 @@ export function RoiCalculator(){
 
   const money=(n:number)=>new Intl.NumberFormat('en', { style:'currency', currency, maximumFractionDigits:0 }).format(n);
 
-  return (
-    <div className="section">
-      <div className="hero">
-        <h1>AI at Work — Human Productivity ROI</h1>
-        <p>Estimate business impact from training your managers and teams to use AI confidently. Brand: vivid blue. Font: Inter.</p>
-      </div>
+  /* shareable link */
+  const shareUrl = () => {
+    const qs = encodeInputs(inputs);
+    return `${typeof window!=='undefined' ? window.location.origin : ''}/report?${qs}`;
+  };
 
-      <div className="section"><Steps current={step}/></div>
+  /* CSV export */
+  const downloadCSV = () => {
+    const rows = [
+      ['currency', inputs.currency],
+      ['team', inputs.team],
+      ['maturityScore', inputs.maturityScore],
+      ['employees', inputs.employees],
+      ['avgSalary', inputs.avgSalary],
+      ['hoursSavedPerWeek', inputs.hoursSavedPerWeek],
+      ['retentionImprovementPts', inputs.retentionImprovementPts],
+      ['trainingPerEmployee', inputs.trainingPerEmployee],
+      ['durationMonths', inputs.durationMonths],
+      ['pains', inputs.pains.join('|')],
+      [],
+      ['monthlySavings', res.monthlySavings],
+      ['annualValue', res.annualValue],
+      ['retentionValue', res.retentionValue],
+      ['hoursTotalYear', res.hoursTotalYear],
+      ['paybackMonths', res.paybackMonths],
+      ['roiMultiple', res.roiMultiple],
+    ];
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'brainster-ai-roi.csv';
+    a.click();
+  };
+
+  return (
+    <div className="section container">
+      <Steps current={step}/>
 
       {/* 1 BASICS */}
       {step===1 && (
         <div className="card">
-          <h3>Basics</h3>
+          <h3><IconTeam/> Basics</h3>
           <div style={{display:'grid',gap:12,gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))'}}>
             <div>
               <label className="label">Team</label>
               <select className="input" value={team} onChange={(e)=>setTeam(e.target.value as Team)}>
                 {TEAMS.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
-              <p className="help">We’ll load sensible defaults for each team (hours saved & retention effect).</p>
+              <p className="help">We’ll load sensible defaults (hours saved & retention effect).</p>
             </div>
             <CurrencySelect value={currency} onChange={setCurrency}/>
           </div>
@@ -109,7 +141,7 @@ export function RoiCalculator(){
       {/* 2 MATURITY */}
       {step===2 && (
         <div className="card">
-          <h3>AI Maturity</h3>
+          <h3><IconGauge/> AI Maturity</h3>
           <MaturitySlider value={maturityScore} onChange={setMaturityScore}/>
           <div className="tooltip" style={{marginTop:8}}>
             <span className="subtle">What does this change?</span>
@@ -125,7 +157,7 @@ export function RoiCalculator(){
       {/* 3 TEAM & COST */}
       {step===3 && (
         <div className="card">
-          <h3>Team size & cost</h3>
+          <h3><IconMoney/> Team size & cost</h3>
           <div style={{display:'grid',gap:12,gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))'}}>
             <NumberField label="Employees in scope" value={employees} onChange={setEmployees} min={1}/>
             <NumberField label={`Average annual salary (${S})`} value={avgSalary} onChange={setAvgSalary} step={1000}/>
@@ -141,7 +173,7 @@ export function RoiCalculator(){
       {/* 4 PRODUCTIVITY */}
       {step===4 && (
         <div className="card">
-          <h3>Productivity (time saved)</h3>
+          <h3><IconClock/> Productivity (time saved)</h3>
           <NumberField label="Hours saved per person per week" value={hoursSavedPerWeek} onChange={setHoursSavedPerWeek} min={0} step={0.5} suffix="hrs/week"
                        hint="Typical post-training range: 2–5 hrs/week depending on role."/>
           <div style={{display:'flex',gap:8,marginTop:12}}>
@@ -154,7 +186,7 @@ export function RoiCalculator(){
       {/* 5 RETENTION */}
       {step===5 && (
         <div className="card">
-          <h3>Retention impact</h3>
+          <h3><IconPeople/> Retention impact</h3>
           <NumberField label="Attrition reduction (percentage points)" value={retentionImprovementPts} onChange={setRetentionImprovementPts} min={0} step={0.5} suffix="pts"
                        hint="Training + engagement often yields 1–4 pts improvement."/>
           <div style={{display:'flex',gap:8,marginTop:12}}>
@@ -167,9 +199,9 @@ export function RoiCalculator(){
       {/* 6 FOCUS AREAS */}
       {step===6 && (
         <div className="card">
-          <h3>Primary focus areas (choose up to 3)</h3>
+          <h3><IconSpark/> Primary focus areas (choose up to 3)</h3>
           <MultiPick values={pains} onChange={setPains} options={PAIN_OPTS} max={3}/>
-          <p className="help" style={{marginTop:6}}>We’ll use these to tailor the summary language and recommended next steps.</p>
+          <p className="help" style={{marginTop:6}}>We tailor the result copy and next steps to these priorities.</p>
           <div style={{display:'flex',gap:8,marginTop:12}}>
             <button className="btn btn-ghost" onClick={()=>setStep(5)}>← Back</button>
             <button className="btn btn-primary" onClick={()=>setStep(7)}>Continue →</button>
@@ -180,7 +212,7 @@ export function RoiCalculator(){
       {/* 7 TRAINING & DURATION */}
       {step===7 && (
         <div className="card">
-          <h3>Training plan & duration</h3>
+          <h3><IconMoney/> Training plan & duration</h3>
           <div style={{display:'grid',gap:12,gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))'}}>
             <NumberField label={`Training per employee (${S})`} value={trainingPerEmployee} onChange={setTrainingPerEmployee} step={25}/>
             <NumberField label="Program duration (months)" value={durationMonths} onChange={setDurationMonths} min={1} step={1}/>
@@ -204,14 +236,22 @@ export function RoiCalculator(){
             <div className="kpi"><div className="title">Retention value</div><div className="value">{money(res.retentionValue)}</div></div>
           </div>
 
-          {/* tailored text */}
-          <div style={{marginTop:10}} className="help">
-            Focus areas selected: {pains.length? pains.join(', ') : '— none selected'}. Your maturity score of {maturityScore}/10 suggests {maturityScore<=4?'high headroom for gains':'moderate additional upside'}.
+          <div className="help" style={{marginTop:8}}>
+            Focus areas: {pains.length? pains.join(', ') : '— none selected'}. Maturity {maturityScore}/10 → {maturityScore<=4?'high headroom':'moderate additional gains'}.
           </div>
 
-          <div style={{display:'flex',gap:8,marginTop:12}}>
-            <button className="btn btn-ghost" onClick={()=>setStep(7)}>← Back</button>
-            <button className="btn btn-primary" onClick={()=>setStep(1)}>Start over</button>
+          <NextSteps pains={pains as any} />
+
+          <div style={{display:'flex',gap:8,marginTop:14,flexWrap:'wrap'}}>
+            <button className="btn btn-primary" onClick={()=>window.open(shareUrl(),'_blank')}>Open Print View / PDF</button>
+            <button className="btn btn-light" onClick={downloadCSV}>Download CSV</button>
+            <button className="btn btn-ghost" onClick={()=>{
+              const qs = encodeInputs(inputs);
+              const url = `${window.location.origin}${window.location.pathname}?${qs}`;
+              navigator.clipboard.writeText(url);
+              alert('Shareable link copied to clipboard.');
+            }}>Copy Shareable Link</button>
+            <button className="btn btn-ghost" onClick={()=>setStep(1)}>Start over</button>
           </div>
         </div>
       )}
