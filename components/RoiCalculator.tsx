@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import {
   calc,
   Inputs,
@@ -15,7 +15,6 @@ import {
   CurrencySelect,
   MultiPick,
   NumberField,
-  MaturitySlider,
 } from './controls';
 import NextSteps from './NextSteps';
 import {
@@ -45,6 +44,27 @@ const TEAMS: { label: string; value: Team }[] = [
   { label: 'Product', value: 'product' },
 ];
 
+/** suggest hours saved based on team baseline + maturity headroom */
+function suggestHours(team: Team, maturityScore: number): number {
+  const base = teamPresets(team).hours; // e.g., support 4.5, marketing 3.5, etc.
+  let m = 1.0;
+  if (maturityScore <= 3) m = 1.25;        // low maturity → more upside than base
+  else if (maturityScore <= 6) m = 1.0;    // mid
+  else if (maturityScore <= 8) m = 0.75;   // high
+  else m = 0.55;                            // very high maturity → less upside
+  // round to nearest 0.5
+  return Math.max(0, Math.round((base * m) * 2) / 2);
+}
+
+function maturitySummary(score: number): string {
+  const v = Math.round(score);
+  if (v <= 2) return 'Little or no employees using AI for tasks; no guidance or policy.';
+  if (v <= 4) return 'A few individuals experiment; ad-hoc wins; no shared prompts.';
+  if (v <= 6) return 'Some teams using AI weekly; early playbooks; limited measurement.';
+  if (v <= 8) return 'AI embedded in key workflows; prompt libraries; KPIs tracked monthly.';
+  return 'AI fully embedded across workflows; champions network; ROI reviewed quarterly.';
+}
+
 export function RoiCalculator() {
   const [step, setStep] = useState(1);
 
@@ -52,15 +72,16 @@ export function RoiCalculator() {
   const [currency, setCurrency] = useState<Currency>('EUR');
   const [team, setTeam] = useState<Team>('hr');
 
-  // maturity
+  // maturity + productivity (merged)
   const [maturityScore, setMaturityScore] = useState<number>(5);
+  const [hoursSavedPerWeek, setHoursSavedPerWeek] = useState<number>(3);
+  const userTouchedHours = useRef(false);
 
   // size & cost
   const [employees, setEmployees] = useState<number>(150);
   const [avgSalary, setAvgSalary] = useState<number>(52000);
 
-  // productivity + retention
-  const [hoursSavedPerWeek, setHoursSavedPerWeek] = useState<number>(3);
+  // retention
   const [retentionImprovementPts, setRetentionImprovementPts] =
     useState<number>(2);
 
@@ -71,12 +92,19 @@ export function RoiCalculator() {
   const [trainingPerEmployee, setTrainingPerEmployee] = useState<number>(850);
   const [durationMonths, setDurationMonths] = useState<number>(3);
 
-  // presets when team changes
+  // presets when team changes → reset hours with maturity suggestion unless user overrode
   useEffect(() => {
     const p = teamPresets(team);
-    setHoursSavedPerWeek(p.hours);
-    setRetentionImprovementPts(p.retentionPts);
+    const suggested = suggestHours(team, maturityScore);
+    if (!userTouchedHours.current) setHoursSavedPerWeek(suggested || p.hours);
   }, [team]);
+
+  // when maturity changes → auto adjust hours unless user manually changed
+  useEffect(() => {
+    if (!userTouchedHours.current) {
+      setHoursSavedPerWeek(suggestHours(team, maturityScore));
+    }
+  }, [maturityScore, team]);
 
   const inputs: Inputs = {
     currency,
@@ -90,9 +118,9 @@ export function RoiCalculator() {
     durationMonths,
     pains,
   };
+
   const S = symbol(currency);
   const res = useMemo(() => calc(inputs), [inputs]);
-
   const money = (n: number) =>
     new Intl.NumberFormat('en', {
       style: 'currency',
@@ -103,9 +131,8 @@ export function RoiCalculator() {
   const Stepper = () => {
     const labels = [
       'Basics',
-      'Maturity',
+      'Maturity + Productivity',
       'Team & Cost',
-      'Productivity',
       'Retention',
       'Focus',
       'Training',
@@ -172,6 +199,31 @@ export function RoiCalculator() {
     }
   };
 
+  /** clickable 1–10 maturity scale */
+  const MaturityScale = () => (
+    <div>
+      <label className="label">AI Maturity (1–10)</label>
+      <div className="maturity-scale">
+        {Array.from({ length: 10 }).map((_, i) => {
+          const val = i + 1;
+          const active = val === maturityScore;
+          return (
+            <button
+              key={val}
+              type="button"
+              className={`n ${active ? 'active' : ''}`}
+              onClick={() => setMaturityScore(val)}
+              aria-label={`Maturity ${val}`}
+            >
+              {val}
+            </button>
+          );
+        })}
+      </div>
+      <p className="help" style={{ marginTop: 6 }}>{maturitySummary(maturityScore)}</p>
+    </div>
+  );
+
   return (
     <div className="section container">
       <Stepper />
@@ -203,8 +255,7 @@ export function RoiCalculator() {
                 ))}
               </select>
               <p className="help">
-                We load sensible defaults per team (time-saved & retention
-                impact).
+                We load sensible defaults per team (time-saved & retention impact).
               </p>
             </div>
             <CurrencySelect value={currency} onChange={setCurrency} />
@@ -217,15 +268,27 @@ export function RoiCalculator() {
         </div>
       )}
 
-      {/* 2 MATURITY */}
+      {/* 2 MATURITY + PRODUCTIVITY (merged) */}
       {step === 2 && (
         <div className="card">
           <h3>
-            <IconGauge /> AI maturity (1–10)
+            <IconGauge /> AI maturity &nbsp; <IconClock /> Productivity
           </h3>
-          <MaturitySlider value={maturityScore} onChange={setMaturityScore} />
-          <div className="help" style={{ marginTop: 8 }}>
-            Higher maturity = less headroom; we discount gains accordingly.
+          <div style={{display:'grid', gap:14, gridTemplateColumns:'1.2fr 1fr'}}>
+            <div>
+              <MaturityScale />
+            </div>
+            <div>
+              <NumberField
+                label="Hours saved per person per week"
+                value={hoursSavedPerWeek}
+                onChange={(n) => { userTouchedHours.current = true; setHoursSavedPerWeek(n); }}
+                min={0}
+                step={0.5}
+                suffix="hrs/week"
+                hint="Auto-suggested from maturity + team. You can override."
+              />
+            </div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
             <button className="btn btn-ghost" onClick={() => setStep(1)}>
@@ -278,34 +341,8 @@ export function RoiCalculator() {
         </div>
       )}
 
-      {/* 4 PRODUCTIVITY */}
+      {/* 4 RETENTION */}
       {step === 4 && (
-        <div className="card">
-          <h3>
-            <IconClock /> Productivity (time saved)
-          </h3>
-          <NumberField
-            label="Hours saved per person per week"
-            value={hoursSavedPerWeek}
-            onChange={setHoursSavedPerWeek}
-            min={0}
-            step={0.5}
-            suffix="hrs/week"
-            hint="Typical post-training range: 2–5 hrs/week by role."
-          />
-          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-            <button className="btn btn-ghost" onClick={() => setStep(3)}>
-              ← Back
-            </button>
-            <button className="btn btn-primary" onClick={() => setStep(5)}>
-              Continue →
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 5 RETENTION */}
-      {step === 5 && (
         <div className="card">
           <h3>
             <IconPeople /> Retention impact
@@ -320,18 +357,18 @@ export function RoiCalculator() {
             hint="Training + engagement often yields 1–4 points improvement."
           />
           <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-            <button className="btn btn-ghost" onClick={() => setStep(4)}>
+            <button className="btn btn-ghost" onClick={() => setStep(3)}>
               ← Back
             </button>
-            <button className="btn btn-primary" onClick={() => setStep(6)}>
+            <button className="btn btn-primary" onClick={() => setStep(5)}>
               Continue →
             </button>
           </div>
         </div>
       )}
 
-      {/* 6 FOCUS AREAS */}
-      {step === 6 && (
+      {/* 5 FOCUS AREAS */}
+      {step === 5 && (
         <div className="card">
           <h3>
             <IconSpark /> Primary focus areas (up to 3)
@@ -346,21 +383,21 @@ export function RoiCalculator() {
             We’ll tailor the summary and next steps to these priorities.
           </p>
           <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-            <button className="btn btn-ghost" onClick={() => setStep(5)}>
+            <button className="btn btn-ghost" onClick={() => setStep(4)}>
               ← Back
             </button>
-            <button className="btn btn-primary" onClick={() => setStep(7)}>
+            <button className="btn btn-primary" onClick={() => setStep(6)}>
               Continue →
             </button>
           </div>
         </div>
       )}
 
-      {/* 7 TRAINING & DURATION */}
-      {step === 7 && (
+      {/* 6 TRAINING */}
+      {step === 6 && (
         <div className="card">
           <h3>
-            <IconMoney /> Training plan & duration
+            <IconMoney /> Training plan
           </h3>
           <div
             style={{
@@ -375,14 +412,31 @@ export function RoiCalculator() {
               onChange={setTrainingPerEmployee}
               step={25}
             />
-            <NumberField
-              label="Program duration (months)"
-              value={durationMonths}
-              onChange={setDurationMonths}
-              min={1}
-              step={1}
-            />
           </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+            <button className="btn btn-ghost" onClick={() => setStep(5)}>
+              ← Back
+            </button>
+            <button className="btn btn-primary" onClick={() => setStep(7)}>
+              Continue →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 7 DURATION */}
+      {step === 7 && (
+        <div className="card">
+          <h3>
+            <IconClock /> Duration
+          </h3>
+          <NumberField
+            label="Program duration (months)"
+            value={durationMonths}
+            onChange={setDurationMonths}
+            min={1}
+            step={1}
+          />
           <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
             <button className="btn btn-ghost" onClick={() => setStep(6)}>
               ← Back
