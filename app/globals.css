@@ -1,40 +1,16 @@
-:root{
-  --brand:#3366FE;           /* Brainster vivid blue */
-  --bg:#0B0F19;              /* deep navy for dark sections */
-  --text:#111827;            /* near-black text */
-  --muted:#6B7280;           /* neutral */
-  --card:#FFFFFF;            /* panels */
-  --accent:#F45C48;          /* coral accent (sparingly) */
-  --surface:#F8F8F8;         /* light background */
+/* … keep your existing globals.css and ADD the bits below … */
+
+.ticks {display:flex; justify-content:space-between; margin-top:.35rem}
+.tick {width:2px; height:10px; background:#D7DFFF; border-radius:2px}
+.tick.big{height:14px; background:#B9C7FF}
+
+.tooltip {position:relative; display:inline-flex; align-items:center; gap:.35rem; font-size:.9rem}
+.tooltip .tip {
+  position:absolute; top:120%; left:0; z-index:5; min-width:240px;
+  background:#0B0F19; color:#fff; padding:.6rem .7rem; border-radius:10px;
+  box-shadow:0 8px 20px rgba(10,22,70,.22); display:none
 }
+.tooltip:hover .tip{display:block}
 
-html,body{height:100%}
-body{
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-  color:var(--text);
-  background:var(--surface);
-}
-
-.container{max-width:64rem;margin:0 auto;padding:1.25rem}
-
-.card{background:var(--card);border:1px solid #E5E7EB;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.04)}
-
-.btn{display:inline-flex;align-items:center;gap:.5rem;border-radius:10px;padding:.65rem 1rem;font-weight:600;border:1px solid transparent}
-.btn-primary{background:var(--brand);color:#fff}
-.btn-ghost{background:#fff;border-color:#E5E7EB;color:var(--text)}
-.btn:disabled{opacity:.6;cursor:not-allowed}
-
-.input{width:100%;border:1px solid #E5E7EB;border-radius:10px;padding:.55rem .7rem}
-.label{font-weight:600}
-.help{font-size:.85rem;color:var(--muted)}
-
-.step{display:flex;align-items:center;gap:.5rem;color:var(--muted)}
-.step-active{color:var(--text)}
-
-.kpi{padding:1rem;border-radius:12px;background:#fff;border:1px solid #EEF2FF}
-.kpi .title{font-size:.75rem;color:#666}
-.kpi .value{font-weight:700;font-size:1.15rem}
-
-.badge{display:inline-block;padding:.25rem .5rem;border-radius:999px;background:#EEF2FF;color:var(--brand);font-size:.75rem;font-weight:700}
-
-hr.div{border:none;border-top:1px solid #E5E7EB;margin:.5rem 0}
+/* section subtitles */
+.subtle {font-size:.9rem; color:#667085}
