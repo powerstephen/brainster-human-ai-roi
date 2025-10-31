@@ -70,7 +70,7 @@ export function MaturitySlider({
     if(v<=4) return 'A few individuals experiment; ad-hoc wins; no shared prompts.';
     if(v<=6) return 'Some teams using AI weekly; early playbooks; limited measurement.';
     if(v<=8) return 'AI embedded in key workflows; prompt libraries; KPIs tracked monthly.';
-    return 'AI fully embedded across most workflows; champions network; ROI reviewed quarterly.';
+    return 'AI fully embedded across workflows; champions network; ROI reviewed quarterly.';
   },[value]);
 
   return (
