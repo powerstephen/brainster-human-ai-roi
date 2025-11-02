@@ -1,18 +1,42 @@
-export const IconTeam = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 12c2.761 0 5-2.239 5-5S14.761 2 12 2 7 4.239 7 7s2.239 5 5 5Zm0 2c-3.866 0-7 2.239-7 5v1h14v-1c0-2.761-3.134-5-7-5Z" fill="currentColor"/></svg>
-);
-export const IconGauge = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7V3Zm7.3 6.1-5.657 5.657-1.414-1.414 5.657-5.657 1.414 1.414Z" fill="currentColor"/></svg>
-);
-export const IconMoney = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 6h18v12H3zM7 12h10M7 9h3M14 15h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-);
-export const IconClock = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 7v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/></svg>
-);
-export const IconPeople = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 7a3 3 0 1 1 6 0 3 3 0 0 1-6 0Zm-5 11a6 6 0 1 1 12 0H4Zm13 0a5 5 0 0 1 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-);
-export const IconSpark = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m12 2 1.8 4.2L18 8l-4.2 1.8L12 14l-1.8-4.2L6 8l4.2-1.8L12 2Z" fill="currentColor" opacity=".9"/></svg>
-);
+export function IconTeam() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V20h10v-3.5C11 14.17 6.33 13 4 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.96 1.97 3.45V20h8v-3.5c0-2.33-4.67-3.5-7-3.5z"/>
+    </svg>
+  );
+}
+export function IconGauge() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 3C7.03 3 3 7.03 3 12h2a7 7 0 1114 0h2c0-4.97-4.03-9-9-9zm-1 9l-4 4 1.41 1.41L12 13.83l3.59 3.58L17 16l-4-4h-2z"/>
+    </svg>
+  );
+}
+export function IconMoney() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-1 10H4V8h16v8zM6 10h2v4H6v-4zm10 0h2v4h-2v-4z"/>
+    </svg>
+  );
+}
+export function IconClock() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 1a11 11 0 100 22 11 11 0 000-22zm.5 6H11v6l5 3 .75-1.23-4.25-2.52V7z"/>
+    </svg>
+  );
+}
+export function IconPeople() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zM8 11c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm8 2c-2.33 0-7 1.17-7 3.5V20h12v-3.5c0-2.33-4.67-3.5-7-3.5zM8 13c-.29 0-.62.02-.97.05 1.16.84 1.97 1.96 1.97 3.45V20h4v-3.5C13 14.17 10.33 13 8 13z"/>
+    </svg>
+  );
+}
+export function IconSpark() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2l1.546 4.755L18 8l-4.454 1.245L12 14l-1.546-4.755L6 8l4.454-1.245L12 2zm6 8l.773 2.378L22 13l-3.227.622L18 16l-.773-2.378L14 13l3.227-.622L18 10zM6 10l.773 2.378L10 13l-3.227.622L6 16l-.773-2.378L2 13l3.227-.622L6 10z"/>
+    </svg>
+  );
+}
