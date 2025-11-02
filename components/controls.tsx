@@ -24,6 +24,39 @@ export function CurrencySelect({
   );
 }
 
+/** New: pill buttons instead of dropdown */
+export function CurrencyPills({
+  value,
+  onChange,
+}: {
+  value: Currency;
+  onChange: (c: Currency) => void;
+}) {
+  const opts: { v: Currency; t: string }[] = [
+    { v: 'EUR', t: 'EUR €' },
+    { v: 'USD', t: 'USD $' },
+    { v: 'GBP', t: 'GBP £' },
+  ];
+  return (
+    <div>
+      <label className="label">Currency</label>
+      <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
+        {opts.map(o => (
+          <button
+            key={o.v}
+            type="button"
+            onClick={() => onChange(o.v)}
+            className={`chip ${value === o.v ? 'active' : ''}`}
+            aria-pressed={value === o.v}
+          >
+            {o.t}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function NumberField({
   label,
   value,
