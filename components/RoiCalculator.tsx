@@ -82,7 +82,7 @@ export function RoiCalculator() {
   const [employees, setEmployees] = useState<number>(150);
   const [avgSalary, setAvgSalary] = useState<number>(52000);
 
-  // retention (same as before)
+  // retention
   const [baselineTurnoverPct, setBaselineTurnoverPct] = useState<number>(teamPresets('all').baselineTurnoverPct);
   const [turnoverImprovementPct, setTurnoverImprovementPct] = useState<number>(10);
   const [replacementCostFactor, setReplacementCostFactor] = useState<number>(0.5);
@@ -92,9 +92,11 @@ export function RoiCalculator() {
 
   // training
   const [trainingPerEmployee, setTrainingPerEmployee] = useState<number>(850);
+
+  // duration
   const [durationMonths, setDurationMonths] = useState<number>(3);
 
-  // adjust derived defaults on team/maturity changes
+  // Update derived defaults when team/maturity changes
   useEffect(() => {
     if (!userTouchedHours.current) {
       setHoursSavedPerWeek(suggestedHoursFromMaturity(team, maturityScore));
@@ -135,7 +137,7 @@ export function RoiCalculator() {
       maximumFractionDigits: 0,
     }).format(n);
 
-  // Stepper labels updated for new flow
+  // Stepper (6 clear steps; Results is step 6)
   const Stepper = () => {
     const labels = [
       'Audience',
@@ -163,11 +165,11 @@ export function RoiCalculator() {
     );
   };
 
+  // Sharing / export helpers
   const openPrintView = () => {
     const qs = encodeInputs(inputs);
     if (typeof window !== 'undefined') window.open(`/report?${qs}`, '_blank');
   };
-
   const downloadCSV = () => {
     const rows = [
       ['currency', inputs.currency],
@@ -197,7 +199,6 @@ export function RoiCalculator() {
     a.download = 'brainster-ai-roi.csv';
     a.click();
   };
-
   const copyShareLink = () => {
     const qs = encodeInputs(inputs);
     if (typeof window !== 'undefined') {
@@ -207,6 +208,7 @@ export function RoiCalculator() {
     }
   };
 
+  // Maturity scale (own row)
   const MaturityScale = () => (
     <div>
       <label className="label">AI Maturity (1–10)</label>
@@ -232,7 +234,7 @@ export function RoiCalculator() {
     </div>
   );
 
-  // Quick productivity per employee and total
+  // Quick productivity / hours for blue box
   const hoursPerEmployeeYear = hoursSavedPerWeek * 52;
   const hoursTotalYear = res.hoursTotalYear || 0;
   const monthlyProd = (res.productivityAnnual || 0) / 12;
@@ -242,13 +244,13 @@ export function RoiCalculator() {
     <div className="section container">
       <Stepper />
 
-      {/* STEP 1: AUDIENCE (Team, Focus Areas, Currency) */}
+      {/* STEP 1: AUDIENCE (Team, Employees, Focus Areas, Currency) */}
       {step === 1 && (
         <div className="card">
           <h3>
             <IconTeam /> Audience
           </h3>
-          <div style={{display:'grid', gap:14, gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))'}}>
+          <div style={{display:'grid', gap:16, gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))'}}>
             <div>
               <label className="label">Team</label>
               <select
@@ -264,6 +266,13 @@ export function RoiCalculator() {
               </select>
               <p className="help">Choose a function or “Company-wide”.</p>
             </div>
+
+            <NumberField
+              label="Employees in scope"
+              value={employees}
+              onChange={setEmployees}
+              min={1}
+            />
 
             <div>
               <label className="label">Focus areas (up to 3)</label>
@@ -286,31 +295,26 @@ export function RoiCalculator() {
         </div>
       )}
 
-      {/* STEP 2: AI BENCHMARK (Left = maturity + employees, Right = blue box) */}
+      {/* STEP 2: AI BENCHMARK (Left = maturity + hours override, Right = blue box) */}
       {step === 2 && (
         <div className="card">
           <h3>
             <IconGauge /> AI Benchmark
           </h3>
 
-          <div style={{display:'grid', gap:16, gridTemplateColumns:'1.1fr .9fr', alignItems:'start'}}>
+          {/* 2-column grid, equally balanced to keep alignment tidy */}
+          <div
+            style={{
+              display: 'grid',
+              gap: 16,
+              gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)',
+              alignItems: 'start',
+            }}
+          >
             {/* Left column */}
-            <div>
+            <div style={{paddingRight:8}}>
               <MaturityScale />
-
               <div style={{display:'grid', gap:14, gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))', marginTop:12}}>
-                <NumberField
-                  label="Employees in scope"
-                  value={employees}
-                  onChange={setEmployees}
-                  min={1}
-                />
-                <NumberField
-                  label={`Avg annual salary (${symbol(currency)})`}
-                  value={avgSalary}
-                  onChange={setAvgSalary}
-                  step={1000}
-                />
                 <NumberField
                   label="Hours saved per person per week (override)"
                   value={hoursSavedPerWeek}
@@ -324,11 +328,12 @@ export function RoiCalculator() {
             </div>
 
             {/* Right column — Blue highlight */}
-            <div className="highlight">
+            <div className="highlight" style={{width:'100%'}}>
               <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8}}>
                 <div style={{fontWeight:900, letterSpacing:'-.01em'}}>Estimated Hours Saved</div>
                 <div className="badge" style={{borderColor:'rgba(255,255,255,.4)', background:'rgba(255,255,255,.15)', color:'#fff'}}>Live</div>
               </div>
+
               <div className="row">
                 <div className="item">
                   <div className="t">Per employee / year</div>
@@ -418,7 +423,7 @@ export function RoiCalculator() {
         </div>
       )}
 
-      {/* STEP 4: TRAINING */}
+      {/* STEP 4: TRAINING (also put Avg Salary here to keep Step 2 lighter) */}
       {step === 4 && (
         <div className="card">
           <h3>
@@ -432,11 +437,10 @@ export function RoiCalculator() {
               step={25}
             />
             <NumberField
-              label="Program duration (months)"
-              value={durationMonths}
-              onChange={setDurationMonths}
-              min={1}
-              step={1}
+              label={`Average annual salary (${symbol(currency)})`}
+              value={avgSalary}
+              onChange={setAvgSalary}
+              step={1000}
             />
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent:'space-between' }}>
@@ -450,8 +454,34 @@ export function RoiCalculator() {
         </div>
       )}
 
-      {/* STEP 5: RESULTS */}
+      {/* STEP 5: DURATION */}
       {step === 5 && (
+        <div className="card">
+          <h3>
+            <IconClock /> Duration
+          </h3>
+          <div style={{display:'grid', gap:12, gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))'}}>
+            <NumberField
+              label="Program duration (months)"
+              value={durationMonths}
+              onChange={setDurationMonths}
+              min={1}
+              step={1}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent:'space-between' }}>
+            <button className="btn btn-ghost" onClick={() => setStep(4)}>
+              ← Back
+            </button>
+            <button className="btn btn-primary" onClick={() => setStep(6)}>
+              Continue →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* STEP 6: RESULTS */}
+      {step === 6 && (
         <div className="card">
           <h3>Results</h3>
           <div className="kpi-grid">
