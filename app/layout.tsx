@@ -1,28 +1,29 @@
-import './globals.css';
-import { ReactNode } from 'react';
-
 export const metadata = {
   title: 'AI at Work — Human Productivity ROI',
-  description: 'Estimate the impact of AI capability on team performance.',
+  description:
+    'Quantify time saved, payback, and retention impact from training managers and teams to work effectively with AI.',
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+import './globals.css';
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
       <body>
-        <div className="nav">
+        <nav className="nav">
           <div className="container nav-inner">
             <div className="brand">
               <span className="brand-dot" />
-              <span>Brainster · AI at Work</span>
-              <span className="badge">Vivid Blue</span>
+              AI at Work — Human Productivity ROI
             </div>
-            <div style={{display:'flex',gap:8,alignItems:'center'}}>
-              <a className="btn btn-primary" href="/report">Print / PDF</a>
-            </div>
+            <div className="badge">Brainster Blue</div>
           </div>
-        </div>
-        {children}
+        </nav>
+        <main className="container">{children}</main>
       </body>
     </html>
   );
