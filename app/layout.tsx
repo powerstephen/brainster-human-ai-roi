@@ -4,6 +4,10 @@ export const metadata = {
     'Quantify time saved, payback, and retention impact from training managers and teams to work effectively with AI.',
 };
 
+// Disable static optimization/caching
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import './globals.css';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
