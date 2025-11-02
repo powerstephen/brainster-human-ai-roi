@@ -53,7 +53,7 @@ body{
     linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 60%, #0B1C60 100%);
 }
 .hero--slim{ margin:18px 0 16px; }
-.hero-inner--slim{ padding:22px 22px 16px; }
+.hero-inner--slim{ padding:22px 22px 18px; }
 .hero-inner--slim h1{
   margin:0 0 6px; font-size:34px; line-height:1.06; font-weight:900; letter-spacing:-.02em;
 }
@@ -72,26 +72,14 @@ body{
 @media (min-width: 960px){
   .hero-stats-grid{ grid-template-columns:repeat(4,minmax(0,1fr)); }
 }
-
-/* WHITE BOXES (updated) */
 .hero-stat-tile{
-  background:#ffffff;
-  color:#0E1320;
-  border:1px solid var(--line);
-  border-radius:14px;
-  padding:12px;
-  box-shadow:0 6px 18px rgba(0,0,0,.05);
+  background:linear-gradient(180deg, rgba(255,255,255,.25) 0%, rgba(255,255,255,.08) 100%);
+  border:1px solid rgba(255,255,255,.35);
+  border-radius:14px; padding:12px;
+  box-shadow:0 10px 28px rgba(6,18,70,.22) inset;
 }
-.hero-stat-tile .t{
-  font-size:.78rem;
-  color:#64748B;
-  font-weight:800;
-}
-.hero-stat-tile .v{
-  font-weight:900;
-  font-size:1.05rem;
-  color:#0E1320;
-}
+.hero-stat-tile .t{font-size:.78rem; color:#EEF2FF; font-weight:800}
+.hero-stat-tile .v{font-weight:900; font-size:1.05rem; color:#ffffff}
 
 /* SECTIONS */
 .section{margin:22px 0}
@@ -137,7 +125,15 @@ body{
 .kpi .title{font-size:.76rem; color:#64748B; font-weight:800; margin-top:2px}
 .kpi .value{font-weight:900; font-size:1.16rem}
 
-/* MATURITY SCALE */
+/* SLIDER TICKS / TOOLTIP */
+.ticks{display:flex;justify-content:space-between;margin-top:.4rem}
+.tick{width:2px;height:10px;background:#D7DFFF;border-radius:2px}
+.tick.big{height:14px;background:#B9C7FF}
+.tooltip{position:relative;display:inline-flex;align-items:center;gap:.35rem;font-size:.9rem}
+.tooltip .tip{position:absolute;top:120%;left:0;z-index:5;min-width:260px;background:#0B0F19;color:#fff;padding:.62rem .72rem;border-radius:10px;box-shadow:0 8px 20px rgba(10,22,70,.22);display:none}
+.tooltip:hover .tip{display:block}
+
+/* MATURITY SCALE (1–10 clickable) */
 .maturity-scale{
   display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;
 }
