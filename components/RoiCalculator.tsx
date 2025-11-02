@@ -44,7 +44,6 @@ const TEAMS: { label: string; value: Team }[] = [
   { label: 'Product', value: 'product' },
 ];
 
-/** suggest hours saved based on team baseline + maturity headroom */
 function suggestHours(team: Team, maturityScore: number): number {
   const base = teamPresets(team).hours;
   let m = 1.0;
@@ -80,10 +79,10 @@ export function RoiCalculator() {
   const [employees, setEmployees] = useState<number>(150);
   const [avgSalary, setAvgSalary] = useState<number>(52000);
 
-  // retention (new)
+  // retention (clear inputs)
   const [baselineTurnoverPct, setBaselineTurnoverPct] = useState<number>(teamPresets('hr').baselineTurnoverPct);
-  const [turnoverImprovementPct, setTurnoverImprovementPct] = useState<number>(10); // 10% relative improvement default
-  const [replacementCostFactor, setReplacementCostFactor] = useState<number>(0.5); // 50% of salary default
+  const [turnoverImprovementPct, setTurnoverImprovementPct] = useState<number>(10);
+  const [replacementCostFactor, setReplacementCostFactor] = useState<number>(0.5);
 
   // pain points
   const [pains, setPains] = useState<Pain[]>([]);
@@ -92,14 +91,11 @@ export function RoiCalculator() {
   const [trainingPerEmployee, setTrainingPerEmployee] = useState<number>(850);
   const [durationMonths, setDurationMonths] = useState<number>(3);
 
-  // adjust hours + baseline turnover when team changes
   useEffect(() => {
-    const p = teamPresets(team);
     if (!userTouchedHours.current) setHoursSavedPerWeek(suggestHours(team, maturityScore));
-    setBaselineTurnoverPct(p.baselineTurnoverPct);
+    setBaselineTurnoverPct(teamPresets(team).baselineTurnoverPct);
   }, [team]);
 
-  // when maturity changes → auto adjust hours unless user manually changed
   useEffect(() => {
     if (!userTouchedHours.current) {
       setHoursSavedPerWeek(suggestHours(team, maturityScore));
@@ -175,11 +171,9 @@ export function RoiCalculator() {
       ['employees', inputs.employees],
       ['avgSalary', inputs.avgSalary],
       ['hoursSavedPerWeek', inputs.hoursSavedPerWeek],
-
       ['baselineTurnoverPct', inputs.baselineTurnoverPct],
       ['turnoverImprovementPct', inputs.turnoverImprovementPct],
       ['replacementCostFactor', inputs.replacementCostFactor],
-
       ['trainingPerEmployee', inputs.trainingPerEmployee],
       ['durationMonths', inputs.durationMonths],
       ['pains', inputs.pains.join('|')],
@@ -208,7 +202,6 @@ export function RoiCalculator() {
     }
   };
 
-  /** clickable 1–10 maturity scale */
   const MaturityScale = () => (
     <div>
       <label className="label">AI Maturity (1–10)</label>
@@ -350,7 +343,7 @@ export function RoiCalculator() {
         </div>
       )}
 
-      {/* 4 RETENTION (new inputs) */}
+      {/* 4 RETENTION */}
       {step === 4 && (
         <div className="card">
           <h3>
@@ -518,14 +511,7 @@ export function RoiCalculator() {
 
           <NextSteps pains={pains} />
 
-          <div
-            style={{
-              display: 'flex',
-              gap: 8,
-              marginTop: 16,
-              flexWrap: 'wrap',
-            }}
-          >
+          <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
             <button className="btn btn-primary" onClick={openPrintView}>
               Open Print View / PDF
             </button>
