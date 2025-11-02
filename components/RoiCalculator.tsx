@@ -12,7 +12,7 @@ import {
   encodeInputs,
 } from '../lib/model';
 import {
-  CurrencySelect,
+  CurrencyPills,
   MultiPick,
   NumberField,
 } from './controls';
@@ -36,6 +36,7 @@ const PAIN_OPTS: { label: string; value: Pain }[] = [
 ];
 
 const TEAMS: { label: string; value: Team }[] = [
+  { label: 'Company-wide', value: 'all' },
   { label: 'HR / People Ops', value: 'hr' },
   { label: 'Operations', value: 'ops' },
   { label: 'Marketing', value: 'marketing' },
@@ -46,15 +47,13 @@ const TEAMS: { label: string; value: Team }[] = [
 
 /** Map maturity 1..10 → hours/week (1 ≈ 5h, 10 ≈ 1h), slight team adjustment */
 function suggestedHoursFromMaturity(team: Team, score: number): number {
-  // Linear 1→5h, 10→1h
-  const base = 5 - ((Math.max(1, Math.min(10, score)) - 1) * (4 / 9)); // 5..1
-  // small team factor (support more repetitive → +0.5h; product more deep work → -0.5h)
+  const clamped = Math.max(1, Math.min(10, score));
+  const base = 5 - ((clamped - 1) * (4 / 9)); // 5..1
   const teamAdj =
     team === 'support' ? 0.5 :
     team === 'product' ? -0.5 :
     0;
   const hrs = Math.max(0.5, base + teamAdj);
-  // round to 0.5
   return Math.round(hrs * 2) / 2;
 }
 
@@ -72,7 +71,7 @@ export function RoiCalculator() {
 
   // currency & team
   const [currency, setCurrency] = useState<Currency>('EUR');
-  const [team, setTeam] = useState<Team>('hr');
+  const [team, setTeam] = useState<Team>('all');
 
   // maturity + productivity (merged)
   const [maturityScore, setMaturityScore] = useState<number>(5);
@@ -83,8 +82,8 @@ export function RoiCalculator() {
   const [employees, setEmployees] = useState<number>(150);
   const [avgSalary, setAvgSalary] = useState<number>(52000);
 
-  // retention (clear inputs)
-  const [baselineTurnoverPct, setBaselineTurnoverPct] = useState<number>(teamPresets('hr').baselineTurnoverPct);
+  // retention (same as before)
+  const [baselineTurnoverPct, setBaselineTurnoverPct] = useState<number>(teamPresets('all').baselineTurnoverPct);
   const [turnoverImprovementPct, setTurnoverImprovementPct] = useState<number>(10);
   const [replacementCostFactor, setReplacementCostFactor] = useState<number>(0.5);
 
@@ -136,14 +135,12 @@ export function RoiCalculator() {
       maximumFractionDigits: 0,
     }).format(n);
 
-  // Stepper (unchanged)
+  // Stepper labels updated for new flow
   const Stepper = () => {
     const labels = [
-      'Basics',
-      'Maturity + Productivity',
-      'Team & Cost',
+      'Audience',
+      'AI Benchmark',
       'Retention',
-      'Focus',
       'Training',
       'Duration',
       'Results',
@@ -210,7 +207,6 @@ export function RoiCalculator() {
     }
   };
 
-  /** Roomy maturity scale on its own line */
   const MaturityScale = () => (
     <div>
       <label className="label">AI Maturity (1–10)</label>
@@ -236,7 +232,9 @@ export function RoiCalculator() {
     </div>
   );
 
-  // quick productivity figures for blue box
+  // Quick productivity per employee and total
+  const hoursPerEmployeeYear = hoursSavedPerWeek * 52;
+  const hoursTotalYear = res.hoursTotalYear || 0;
   const monthlyProd = (res.productivityAnnual || 0) / 12;
   const annualProd = res.productivityAnnual || 0;
 
@@ -244,19 +242,13 @@ export function RoiCalculator() {
     <div className="section container">
       <Stepper />
 
-      {/* 1 BASICS */}
+      {/* STEP 1: AUDIENCE (Team, Focus Areas, Currency) */}
       {step === 1 && (
         <div className="card">
           <h3>
-            <IconTeam /> Basics
+            <IconTeam /> Audience
           </h3>
-          <div
-            style={{
-              display: 'grid',
-              gap: 14,
-              gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))',
-            }}
-          >
+          <div style={{display:'grid', gap:14, gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))'}}>
             <div>
               <label className="label">Team</label>
               <select
@@ -270,13 +262,23 @@ export function RoiCalculator() {
                   </option>
                 ))}
               </select>
-              <p className="help">
-                We load sensible defaults per team (time-saved & turnover baseline).
-              </p>
+              <p className="help">Choose a function or “Company-wide”.</p>
             </div>
-            <CurrencySelect value={currency} onChange={setCurrency} />
+
+            <div>
+              <label className="label">Focus areas (up to 3)</label>
+              <MultiPick<Pain>
+                values={pains}
+                onChange={setPains}
+                options={PAIN_OPTS}
+                max={3}
+              />
+            </div>
+
+            <CurrencyPills value={currency} onChange={setCurrency} />
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent:'flex-end' }}>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent:'flex-end' }}>
             <button className="btn btn-primary" onClick={() => setStep(2)}>
               Continue →
             </button>
@@ -284,57 +286,77 @@ export function RoiCalculator() {
         </div>
       )}
 
-      {/* 2 MATURITY + PRODUCTIVITY (merged, with blue highlight) */}
+      {/* STEP 2: AI BENCHMARK (Left = maturity + employees, Right = blue box) */}
       {step === 2 && (
         <div className="card">
           <h3>
-            <IconGauge /> AI maturity &nbsp; <IconClock /> Productivity
+            <IconGauge /> AI Benchmark
           </h3>
 
-          {/* Maturity on its own full row */}
-          <div style={{marginBottom:12}}>
-            <MaturityScale />
-          </div>
+          <div style={{display:'grid', gap:16, gridTemplateColumns:'1.1fr .9fr', alignItems:'start'}}>
+            {/* Left column */}
+            <div>
+              <MaturityScale />
 
-          {/* Separate row for hours input so it doesn't feel cramped */}
-          <div style={{display:'grid', gap:14, gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))'}}>
-            <NumberField
-              label="Hours saved per person per week"
-              value={hoursSavedPerWeek}
-              onChange={(n) => { userTouchedHours.current = true; setHoursSavedPerWeek(n); }}
-              min={0}
-              step={0.5}
-              suffix="hrs/week"
-              hint="Auto-suggested from maturity + team. You can override."
-            />
-            <NumberField
-              label={`Average annual salary (${S})`}
-              value={avgSalary}
-              onChange={setAvgSalary}
-              step={1000}
-            />
-            <NumberField
-              label="Employees in scope"
-              value={employees}
-              onChange={setEmployees}
-              min={1}
-            />
-          </div>
+              <div style={{display:'grid', gap:14, gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))', marginTop:12}}>
+                <NumberField
+                  label="Employees in scope"
+                  value={employees}
+                  onChange={setEmployees}
+                  min={1}
+                />
+                <NumberField
+                  label={`Avg annual salary (${symbol(currency)})`}
+                  value={avgSalary}
+                  onChange={setAvgSalary}
+                  step={1000}
+                />
+                <NumberField
+                  label="Hours saved per person per week (override)"
+                  value={hoursSavedPerWeek}
+                  onChange={(n) => { userTouchedHours.current = true; setHoursSavedPerWeek(n); }}
+                  min={0}
+                  step={0.5}
+                  suffix="hrs/week"
+                  hint="Auto-suggested from maturity + team. You can override."
+                />
+              </div>
+            </div>
 
-          {/* Blue highlight box with big numbers */}
-          <div className="highlight">
-            <div className="row">
-              <div className="item">
-                <div className="t">Hours saved / year (team)</div>
-                <div className="v">{Math.round(res.hoursTotalYear).toLocaleString()}</div>
+            {/* Right column — Blue highlight */}
+            <div className="highlight">
+              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8}}>
+                <div style={{fontWeight:900, letterSpacing:'-.01em'}}>Estimated Hours Saved</div>
+                <div className="badge" style={{borderColor:'rgba(255,255,255,.4)', background:'rgba(255,255,255,.15)', color:'#fff'}}>Live</div>
               </div>
-              <div className="item">
-                <div className="t">Productivity value / month</div>
-                <div className="v">{money(monthlyProd)}</div>
+              <div className="row">
+                <div className="item">
+                  <div className="t">Per employee / year</div>
+                  <div className="v">{Math.round(hoursPerEmployeeYear).toLocaleString()} hrs</div>
+                </div>
+                <div className="item">
+                  <div className="t">Employees in scope</div>
+                  <div className="v">{employees.toLocaleString()}</div>
+                </div>
+                <div className="item">
+                  <div className="t">Total hours / year</div>
+                  <div className="v">{Math.round(hoursTotalYear).toLocaleString()} hrs</div>
+                </div>
               </div>
-              <div className="item">
-                <div className="t">Productivity value / year</div>
-                <div className="v">{money(annualProd)}</div>
+
+              <div className="row" style={{marginTop:10}}>
+                <div className="item">
+                  <div className="t">Productivity value / month</div>
+                  <div className="v">{money(monthlyProd)}</div>
+                </div>
+                <div className="item">
+                  <div className="t">Productivity value / year</div>
+                  <div className="v">{money(annualProd)}</div>
+                </div>
+                <div className="item">
+                  <div className="t">Maturity level</div>
+                  <div className="v">{maturityScore}/10</div>
+                </div>
               </div>
             </div>
           </div>
@@ -350,51 +372,11 @@ export function RoiCalculator() {
         </div>
       )}
 
-      {/* 3 TEAM & COST (kept for flow; now lighter since moved some fields up) */}
+      {/* STEP 3: RETENTION */}
       {step === 3 && (
         <div className="card">
           <h3>
-            <IconMoney /> Team & Cost (optional adjustments)
-          </h3>
-          <p className="help" style={{marginTop:0}}>
-            You’ve already set team size and salary above. Adjust here if needed.
-          </p>
-          <div
-            style={{
-              display: 'grid',
-              gap: 12,
-              gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))',
-            }}
-          >
-            <NumberField
-              label="Employees in scope"
-              value={employees}
-              onChange={setEmployees}
-              min={1}
-            />
-            <NumberField
-              label={`Average annual salary (${S})`}
-              value={avgSalary}
-              onChange={setAvgSalary}
-              step={1000}
-            />
-          </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent:'space-between' }}>
-            <button className="btn btn-ghost" onClick={() => setStep(2)}>
-              ← Back
-            </button>
-            <button className="btn btn-primary" onClick={() => setStep(4)}>
-              Continue →
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 4 RETENTION */}
-      {step === 4 && (
-        <div className="card">
-          <h3>
-            <IconPeople /> Retention impact
+            <IconPeople /> Retention
           </h3>
           <div style={{display:'grid', gap:12, gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))'}}>
             <NumberField
@@ -426,57 +408,25 @@ export function RoiCalculator() {
             />
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent:'space-between' }}>
-            <button className="btn btn-ghost" onClick={() => setStep(3)}>
+            <button className="btn btn-ghost" onClick={() => setStep(2)}>
               ← Back
             </button>
-            <button className="btn btn-primary" onClick={() => setStep(5)}>
+            <button className="btn btn-primary" onClick={() => setStep(4)}>
               Continue →
             </button>
           </div>
         </div>
       )}
 
-      {/* 5 FOCUS AREAS */}
-      {step === 5 && (
+      {/* STEP 4: TRAINING */}
+      {step === 4 && (
         <div className="card">
           <h3>
-            <IconSpark /> Primary focus areas (up to 3)
+            <IconMoney /> Training
           </h3>
-          <MultiPick<Pain>
-            values={pains}
-            onChange={setPains}
-            options={PAIN_OPTS}
-            max={3}
-          />
-          <p className="help" style={{ marginTop: 6 }}>
-            We’ll tailor the summary and next steps to these priorities.
-          </p>
-          <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent:'space-between' }}>
-            <button className="btn btn-ghost" onClick={() => setStep(4)}>
-              ← Back
-            </button>
-            <button className="btn btn-primary" onClick={() => setStep(6)}>
-              Continue →
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 6 TRAINING */}
-      {step === 6 && (
-        <div className="card">
-          <h3>
-            <IconMoney /> Training plan
-          </h3>
-          <div
-            style={{
-              display: 'grid',
-              gap: 12,
-              gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))',
-            }}
-          >
+          <div style={{display:'grid', gap:12, gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))'}}>
             <NumberField
-              label={`Training per employee (${S})`}
+              label={`Training per employee (${symbol(currency)})`}
               value={trainingPerEmployee}
               onChange={setTrainingPerEmployee}
               step={25}
@@ -490,18 +440,18 @@ export function RoiCalculator() {
             />
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent:'space-between' }}>
-            <button className="btn btn-ghost" onClick={() => setStep(5)}>
+            <button className="btn btn-ghost" onClick={() => setStep(3)}>
               ← Back
             </button>
-            <button className="btn btn-primary" onClick={() => setStep(7)}>
+            <button className="btn btn-primary" onClick={() => setStep(5)}>
               Continue →
             </button>
           </div>
         </div>
       )}
 
-      {/* 7 RESULTS */}
-      {step === 7 && (
+      {/* STEP 5: RESULTS */}
+      {step === 5 && (
         <div className="card">
           <h3>Results</h3>
           <div className="kpi-grid">
@@ -534,9 +484,7 @@ export function RoiCalculator() {
           </div>
 
           <p className="help" style={{ marginTop: 10 }}>
-            Focus areas: {pains.length ? pains.join(', ') : '— none selected'}.
-            Maturity {maturityScore}/10 →{' '}
-            {maturityScore <= 4 ? 'high headroom' : 'moderate gains'}.
+            Focus areas: {pains.length ? pains.join(', ') : '— none selected'}. Maturity {maturityScore}/10.
           </p>
 
           <NextSteps pains={pains} />
