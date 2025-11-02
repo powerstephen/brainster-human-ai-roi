@@ -23,7 +23,6 @@ import {
   IconMoney,
   IconClock,
   IconPeople,
-  IconSpark,
 } from './icons';
 
 const PAIN_OPTS: { label: string; value: Pain }[] = [
@@ -45,18 +44,14 @@ const TEAMS: { label: string; value: Team }[] = [
   { label: 'Product', value: 'product' },
 ];
 
-/** Map maturity 1..10 → hours/week (1 ≈ 5h, 10 ≈ 1h), slight team adjustment */
+/** Map maturity 1..10 → hours/week (1 ≈ 5h, 10 ≈ 1h) with small team adj */
 function suggestedHoursFromMaturity(team: Team, score: number): number {
   const clamped = Math.max(1, Math.min(10, score));
   const base = 5 - ((clamped - 1) * (4 / 9)); // 5..1
-  const teamAdj =
-    team === 'support' ? 0.5 :
-    team === 'product' ? -0.5 :
-    0;
+  const teamAdj = team === 'support' ? 0.5 : team === 'product' ? -0.5 : 0;
   const hrs = Math.max(0.5, base + teamAdj);
   return Math.round(hrs * 2) / 2;
 }
-
 function maturityDetail(score: number): string {
   const v = Math.round(score);
   if (v <= 2) return 'Early stage: ad-hoc experimentation; big wins from prompt basics and workflow mapping.';
@@ -69,41 +64,32 @@ function maturityDetail(score: number): string {
 export function RoiCalculator() {
   const [step, setStep] = useState(1);
 
-  // currency & team
+  // audience
   const [currency, setCurrency] = useState<Currency>('EUR');
   const [team, setTeam] = useState<Team>('all');
+  const [employees, setEmployees] = useState<number>(150);
+  const [pains, setPains] = useState<Pain[]>([]);
 
-  // maturity + productivity (merged)
+  // benchmark
   const [maturityScore, setMaturityScore] = useState<number>(5);
   const [hoursSavedPerWeek, setHoursSavedPerWeek] = useState<number>(3);
   const userTouchedHours = useRef(false);
 
-  // size & cost
-  const [employees, setEmployees] = useState<number>(150);
+  // ROI params
   const [avgSalary, setAvgSalary] = useState<number>(52000);
-
-  // retention
   const [baselineTurnoverPct, setBaselineTurnoverPct] = useState<number>(teamPresets('all').baselineTurnoverPct);
   const [turnoverImprovementPct, setTurnoverImprovementPct] = useState<number>(10);
   const [replacementCostFactor, setReplacementCostFactor] = useState<number>(0.5);
-
-  // pain points
-  const [pains, setPains] = useState<Pain[]>([]);
-
-  // training
   const [trainingPerEmployee, setTrainingPerEmployee] = useState<number>(850);
-
-  // duration
   const [durationMonths, setDurationMonths] = useState<number>(3);
 
-  // Update derived defaults when team/maturity changes
+  // defaults on team/maturity change
   useEffect(() => {
     if (!userTouchedHours.current) {
       setHoursSavedPerWeek(suggestedHoursFromMaturity(team, maturityScore));
     }
     setBaselineTurnoverPct(teamPresets(team).baselineTurnoverPct);
   }, [team]);
-
   useEffect(() => {
     if (!userTouchedHours.current) {
       setHoursSavedPerWeek(suggestedHoursFromMaturity(team, maturityScore));
@@ -111,48 +97,23 @@ export function RoiCalculator() {
   }, [maturityScore, team]);
 
   const inputs: Inputs = {
-    currency,
-    team,
-    maturityScore,
-    employees,
-    avgSalary,
-    hoursSavedPerWeek,
-
-    baselineTurnoverPct,
-    turnoverImprovementPct,
-    replacementCostFactor,
-
-    trainingPerEmployee,
-    durationMonths,
-    pains,
+    currency, team, maturityScore, employees, avgSalary, hoursSavedPerWeek,
+    baselineTurnoverPct, turnoverImprovementPct, replacementCostFactor,
+    trainingPerEmployee, durationMonths, pains,
   };
 
   const S = symbol(currency);
   const res = useMemo(() => calc(inputs), [inputs]);
-
   const money = (n: number) =>
-    new Intl.NumberFormat('en', {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 0,
-    }).format(n);
+    new Intl.NumberFormat('en', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n);
 
-  // Stepper (6 clear steps; Results is step 6)
+  // 5 steps with dedicated Results
   const Stepper = () => {
-    const labels = [
-      'Audience',
-      'AI Benchmark',
-      'Retention',
-      'Training',
-      'Duration',
-      'Results',
-    ];
+    const labels = ['Audience','AI Benchmark','Retention','Training & Duration','Results'];
     const pct = Math.min((step - 1) / (labels.length - 1), 1) * 100;
     return (
       <>
-        <div className="progress">
-          <span style={{ width: `${pct}%` }} />
-        </div>
+        <div className="progress"><span style={{ width: `${pct}%` }} /></div>
         <div className="steps">
           {labels.map((t, i) => (
             <div key={t} className={`step ${i + 1 <= step ? 'active' : ''}`}>
@@ -165,7 +126,7 @@ export function RoiCalculator() {
     );
   };
 
-  // Sharing / export helpers
+  // helpers
   const openPrintView = () => {
     const qs = encodeInputs(inputs);
     if (typeof window !== 'undefined') window.open(`/report?${qs}`, '_blank');
@@ -195,20 +156,16 @@ export function RoiCalculator() {
     const csv = rows.map((r) => r.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'brainster-ai-roi.csv';
-    a.click();
+    a.href = URL.createObjectURL(blob); a.download = 'brainster-ai-roi.csv'; a.click();
   };
   const copyShareLink = () => {
     const qs = encodeInputs(inputs);
     if (typeof window !== 'undefined') {
       const url = `${window.location.origin}${window.location.pathname}?${qs}`;
-      navigator.clipboard.writeText(url);
-      alert('Shareable link copied.');
+      navigator.clipboard.writeText(url); alert('Shareable link copied.');
     }
   };
 
-  // Maturity scale (own row)
   const MaturityScale = () => (
     <div>
       <label className="label">AI Maturity (1–10)</label>
@@ -234,7 +191,7 @@ export function RoiCalculator() {
     </div>
   );
 
-  // Quick productivity / hours for blue box
+  // derived for blue box
   const hoursPerEmployeeYear = hoursSavedPerWeek * 52;
   const hoursTotalYear = res.hoursTotalYear || 0;
   const monthlyProd = (res.productivityAnnual || 0) / 12;
@@ -244,13 +201,11 @@ export function RoiCalculator() {
     <div className="section container">
       <Stepper />
 
-      {/* STEP 1: AUDIENCE (Team, Employees, Focus Areas, Currency) */}
+      {/* STEP 1: Audience */}
       {step === 1 && (
         <div className="card">
-          <h3>
-            <IconTeam /> Audience
-          </h3>
-          <div style={{display:'grid', gap:16, gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))'}}>
+          <h3><IconTeam /> Audience</h3>
+          <div className="auto-grid">
             <div>
               <label className="label">Team</label>
               <select
@@ -259,9 +214,7 @@ export function RoiCalculator() {
                 onChange={(e) => setTeam(e.target.value as Team)}
               >
                 {TEAMS.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
+                  <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
               </select>
               <p className="help">Choose a function or “Company-wide”.</p>
@@ -287,34 +240,22 @@ export function RoiCalculator() {
             <CurrencyPills value={currency} onChange={setCurrency} />
           </div>
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent:'flex-end' }}>
-            <button className="btn btn-primary" onClick={() => setStep(2)}>
-              Continue →
-            </button>
+          <div className="centered-block" style={{ display:'flex', gap:8, marginTop:16, justifyContent:'flex-end' }}>
+            <button className="btn btn-primary" onClick={() => setStep(2)}>Continue →</button>
           </div>
         </div>
       )}
 
-      {/* STEP 2: AI BENCHMARK (Left = maturity + hours override, Right = blue box) */}
+      {/* STEP 2: AI Benchmark */}
       {step === 2 && (
         <div className="card">
-          <h3>
-            <IconGauge /> AI Benchmark
-          </h3>
+          <h3><IconGauge /> AI Benchmark</h3>
 
-          {/* 2-column grid, equally balanced to keep alignment tidy */}
-          <div
-            style={{
-              display: 'grid',
-              gap: 16,
-              gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)',
-              alignItems: 'start',
-            }}
-          >
-            {/* Left column */}
+          <div className="two-col">
+            {/* Left column (maturity + optional override) */}
             <div style={{paddingRight:8}}>
               <MaturityScale />
-              <div style={{display:'grid', gap:14, gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))', marginTop:12}}>
+              <div className="auto-grid" style={{marginTop:12}}>
                 <NumberField
                   label="Hours saved per person per week (override)"
                   value={hoursSavedPerWeek}
@@ -327,7 +268,7 @@ export function RoiCalculator() {
               </div>
             </div>
 
-            {/* Right column — Blue highlight */}
+            {/* Right column — Blue box */}
             <div className="highlight" style={{width:'100%'}}>
               <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8}}>
                 <div style={{fontWeight:900, letterSpacing:'-.01em'}}>Estimated Hours Saved</div>
@@ -366,24 +307,18 @@ export function RoiCalculator() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent:'space-between' }}>
-            <button className="btn btn-ghost" onClick={() => setStep(1)}>
-              ← Back
-            </button>
-            <button className="btn btn-primary" onClick={() => setStep(3)}>
-              Continue →
-            </button>
+          <div className="centered-block" style={{ display:'flex', gap:8, marginTop:16, justifyContent:'space-between' }}>
+            <button className="btn btn-ghost" onClick={() => setStep(1)}>← Back</button>
+            <button className="btn btn-primary" onClick={() => setStep(3)}>Continue →</button>
           </div>
         </div>
       )}
 
-      {/* STEP 3: RETENTION */}
+      {/* STEP 3: Retention */}
       {step === 3 && (
         <div className="card">
-          <h3>
-            <IconPeople /> Retention
-          </h3>
-          <div style={{display:'grid', gap:12, gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))'}}>
+          <h3><IconPeople /> Retention</h3>
+          <div className="auto-grid">
             <NumberField
               label="Baseline annual turnover (%)"
               value={baselineTurnoverPct}
@@ -409,58 +344,33 @@ export function RoiCalculator() {
               min={0}
               step={5}
               suffix="%"
-              hint="Common rule: ~50% of salary (recruiting, onboarding, lost productivity)."
+              hint="Common rule: ~50% of salary."
             />
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent:'space-between' }}>
-            <button className="btn btn-ghost" onClick={() => setStep(2)}>
-              ← Back
-            </button>
-            <button className="btn btn-primary" onClick={() => setStep(4)}>
-              Continue →
-            </button>
+          <div className="centered-block" style={{ display:'flex', gap:8, marginTop:14, justifyContent:'space-between' }}>
+            <button className="btn btn-ghost" onClick={() => setStep(2)}>← Back</button>
+            <button className="btn btn-primary" onClick={() => setStep(4)}>Continue →</button>
           </div>
         </div>
       )}
 
-      {/* STEP 4: TRAINING (also put Avg Salary here to keep Step 2 lighter) */}
+      {/* STEP 4: Training & Duration (merged) */}
       {step === 4 && (
         <div className="card">
-          <h3>
-            <IconMoney /> Training
-          </h3>
-          <div style={{display:'grid', gap:12, gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))'}}>
+          <h3><IconMoney /> Training & Duration</h3>
+          <div className="auto-grid">
             <NumberField
-              label={`Training per employee (${symbol(currency)})`}
+              label={`Training per employee (${S})`}
               value={trainingPerEmployee}
               onChange={setTrainingPerEmployee}
               step={25}
             />
             <NumberField
-              label={`Average annual salary (${symbol(currency)})`}
+              label={`Average annual salary (${S})`}
               value={avgSalary}
               onChange={setAvgSalary}
               step={1000}
             />
-          </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent:'space-between' }}>
-            <button className="btn btn-ghost" onClick={() => setStep(3)}>
-              ← Back
-            </button>
-            <button className="btn btn-primary" onClick={() => setStep(5)}>
-              Continue →
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* STEP 5: DURATION */}
-      {step === 5 && (
-        <div className="card">
-          <h3>
-            <IconClock /> Duration
-          </h3>
-          <div style={{display:'grid', gap:12, gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))'}}>
             <NumberField
               label="Program duration (months)"
               value={durationMonths}
@@ -469,48 +379,23 @@ export function RoiCalculator() {
               step={1}
             />
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent:'space-between' }}>
-            <button className="btn btn-ghost" onClick={() => setStep(4)}>
-              ← Back
-            </button>
-            <button className="btn btn-primary" onClick={() => setStep(6)}>
-              Continue →
-            </button>
+          <div className="centered-block" style={{ display:'flex', gap:8, marginTop:14, justifyContent:'space-between' }}>
+            <button className="btn btn-ghost" onClick={() => setStep(3)}>← Back</button>
+            <button className="btn btn-primary" onClick={() => setStep(5)}>Continue →</button>
           </div>
         </div>
       )}
 
-      {/* STEP 6: RESULTS */}
-      {step === 6 && (
+      {/* STEP 5: Results */}
+      {step === 5 && (
         <div className="card">
           <h3>Results</h3>
           <div className="kpi-grid">
-            <div className="kpi">
-              <div className="title">Monthly savings</div>
-              <div className="value">{money(res.monthlySavings)}</div>
-            </div>
-            <div className="kpi">
-              <div className="title">Annual ROI</div>
-              <div className="value">{res.roiMultiple.toFixed(1)}×</div>
-            </div>
-            <div className="kpi">
-              <div className="title">Payback</div>
-              <div className="value">
-                {isFinite(res.paybackMonths)
-                  ? `${res.paybackMonths.toFixed(1)} mo`
-                  : '—'}
-              </div>
-            </div>
-            <div className="kpi">
-              <div className="title">Hours saved / year</div>
-              <div className="value">
-                {Math.round(res.hoursTotalYear).toLocaleString()}
-              </div>
-            </div>
-            <div className="kpi">
-              <div className="title">Retention value</div>
-              <div className="value">{money(res.retentionValue)}</div>
-            </div>
+            <div className="kpi"><div className="title">Monthly savings</div><div className="value">{money(res.monthlySavings)}</div></div>
+            <div className="kpi"><div className="title">Annual ROI</div><div className="value">{res.roiMultiple.toFixed(1)}×</div></div>
+            <div className="kpi"><div className="title">Payback</div><div className="value">{isFinite(res.paybackMonths) ? `${res.paybackMonths.toFixed(1)} mo` : '—'}</div></div>
+            <div className="kpi"><div className="title">Hours saved / year</div><div className="value">{Math.round(res.hoursTotalYear).toLocaleString()}</div></div>
+            <div className="kpi"><div className="title">Retention value</div><div className="value">{money(res.retentionValue)}</div></div>
           </div>
 
           <p className="help" style={{ marginTop: 10 }}>
@@ -519,20 +404,12 @@ export function RoiCalculator() {
 
           <NextSteps pains={pains} />
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap', justifyContent:'space-between' }}>
-            <button className="btn btn-primary" onClick={openPrintView}>
-              Open Print View / PDF
-            </button>
+          <div className="centered-block" style={{ display:'flex', gap:8, marginTop:16, flexWrap:'wrap', justifyContent:'space-between' }}>
+            <button className="btn btn-primary" onClick={openPrintView}>Open Print View / PDF</button>
             <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-              <button className="btn btn-light" onClick={downloadCSV}>
-                Download CSV
-              </button>
-              <button className="btn btn-ghost" onClick={copyShareLink}>
-                Copy Share Link
-              </button>
-              <button className="btn btn-ghost" onClick={() => setStep(1)}>
-                Start over
-              </button>
+              <button className="btn btn-light" onClick={downloadCSV}>Download CSV</button>
+              <button className="btn btn-ghost" onClick={copyShareLink}>Copy Share Link</button>
+              <button className="btn btn-ghost" onClick={() => setStep(1)}>Start over</button>
             </div>
           </div>
         </div>
