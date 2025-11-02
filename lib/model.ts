@@ -3,6 +3,7 @@
 // ------- Types -------
 export type Currency = 'EUR' | 'USD' | 'GBP';
 export type Team =
+  | 'all'        // company-wide option
   | 'hr'
   | 'ops'
   | 'marketing'
@@ -38,14 +39,10 @@ export interface Inputs {
 // ------- Symbols -------
 export function symbol(c: Currency): string {
   switch (c) {
-    case 'EUR':
-      return '€';
-    case 'USD':
-      return '$';
-    case 'GBP':
-      return '£';
-    default:
-      return '€';
+    case 'EUR': return '€';
+    case 'USD': return '$';
+    case 'GBP': return '£';
+    default: return '€';
   }
 }
 
@@ -55,26 +52,21 @@ export function teamPresets(team: Team): {
   baselineTurnoverPct: number;
 } {
   switch (team) {
-    case 'support':
-      return { hours: 4.5, baselineTurnoverPct: 28 }; // contact centers tend to be higher
-    case 'sales':
-      return { hours: 3.5, baselineTurnoverPct: 24 };
-    case 'marketing':
-      return { hours: 3.0, baselineTurnoverPct: 20 };
-    case 'product':
-      return { hours: 2.5, baselineTurnoverPct: 16 };
-    case 'ops':
-      return { hours: 3.0, baselineTurnoverPct: 18 };
-    case 'hr':
-    default:
-      return { hours: 2.5, baselineTurnoverPct: 18 };
+    case 'support':   return { hours: 4.5, baselineTurnoverPct: 28 };
+    case 'sales':     return { hours: 3.5, baselineTurnoverPct: 24 };
+    case 'marketing': return { hours: 3.0, baselineTurnoverPct: 20 };
+    case 'product':   return { hours: 2.5, baselineTurnoverPct: 16 };
+    case 'ops':       return { hours: 3.0, baselineTurnoverPct: 18 };
+    case 'hr':        return { hours: 2.5, baselineTurnoverPct: 18 };
+    case 'all':
+    default:          return { hours: 3.2, baselineTurnoverPct: 20 };
   }
 }
 
 // ------- Core calc -------
 export function calc(i: Inputs) {
   // Productivity value from time saved
-  const HOURS_PER_YEAR = 1800; // conservative working hours
+  const HOURS_PER_YEAR = 1800; // conservative
   const hourlyCost = i.avgSalary / HOURS_PER_YEAR;
   const hoursTotalYear = i.hoursSavedPerWeek * i.employees * 52;
   const productivityAnnual = hoursTotalYear * hourlyCost;
@@ -84,14 +76,14 @@ export function calc(i: Inputs) {
   const improvementRel = clampPct(i.turnoverImprovementPct) / 100;      // 0..1
   const turnoverAfter = baselineTurnover * (1 - improvementRel);
   const avoidedAttritions = i.employees * (baselineTurnover - turnoverAfter);
-  const costPerAttrition = i.avgSalary * clampFactor(i.replacementCostFactor); // e.g., 0.5×salary
+  const costPerAttrition = i.avgSalary * clampFactor(i.replacementCostFactor);
   const retentionValue = avoidedAttritions * costPerAttrition;
 
   // Training cost & ROI
   const trainingCostTotal = i.employees * i.trainingPerEmployee;
   const annualValue = productivityAnnual + retentionValue;
 
-  const monthlySavings = annualValue / 12; // value side
+  const monthlySavings = annualValue / 12;
   const paybackMonths =
     annualValue > 0 ? trainingCostTotal / (annualValue / 12) : Infinity;
   const roiMultiple =
@@ -114,11 +106,10 @@ function clampPct(n: number): number {
 }
 function clampFactor(n: number): number {
   if (!isFinite(n)) return 0.0;
-  // sensible bounds 0..1.5 (150% of salary if they want)
   return Math.max(0, Math.min(1.5, n));
 }
 
-// ------- URL encoding / decoding for sharing -------
+// ------- URL encoding for sharing -------
 export function encodeInputs(i: Inputs): string {
   const qs = new URLSearchParams();
   qs.set('currency', i.currency);
@@ -127,11 +118,9 @@ export function encodeInputs(i: Inputs): string {
   qs.set('employees', String(i.employees));
   qs.set('avgSalary', String(i.avgSalary));
   qs.set('hoursSavedPerWeek', String(i.hoursSavedPerWeek));
-
   qs.set('baselineTurnoverPct', String(i.baselineTurnoverPct));
   qs.set('turnoverImprovementPct', String(i.turnoverImprovementPct));
   qs.set('replacementCostFactor', String(i.replacementCostFactor));
-
   qs.set('trainingPerEmployee', String(i.trainingPerEmployee));
   qs.set('durationMonths', String(i.durationMonths));
   if (i.pains?.length) qs.set('pains', i.pains.join(','));
