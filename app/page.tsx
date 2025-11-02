@@ -1,11 +1,14 @@
 'use client';
 
+// Disable static optimization/caching on this route too
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import { RoiCalculator } from '../components/RoiCalculator';
 
 export default function Home() {
   return (
     <>
-      {/* Slim hero so inputs are visible above the fold */}
       <section className="section">
         <div className="card" style={{ maxWidth: 980, margin: '16px auto' }}>
           <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900 }}>AI at Work — Human Productivity ROI</h1>
