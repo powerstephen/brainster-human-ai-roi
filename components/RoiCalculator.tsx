@@ -44,23 +44,27 @@ const TEAMS: { label: string; value: Team }[] = [
   { label: 'Product', value: 'product' },
 ];
 
-function suggestHours(team: Team, maturityScore: number): number {
-  const base = teamPresets(team).hours;
-  let m = 1.0;
-  if (maturityScore <= 3) m = 1.25;
-  else if (maturityScore <= 6) m = 1.0;
-  else if (maturityScore <= 8) m = 0.75;
-  else m = 0.55;
-  return Math.max(0, Math.round((base * m) * 2) / 2);
+/** Map maturity 1..10 → hours/week (1 ≈ 5h, 10 ≈ 1h), slight team adjustment */
+function suggestedHoursFromMaturity(team: Team, score: number): number {
+  // Linear 1→5h, 10→1h
+  const base = 5 - ((Math.max(1, Math.min(10, score)) - 1) * (4 / 9)); // 5..1
+  // small team factor (support more repetitive → +0.5h; product more deep work → -0.5h)
+  const teamAdj =
+    team === 'support' ? 0.5 :
+    team === 'product' ? -0.5 :
+    0;
+  const hrs = Math.max(0.5, base + teamAdj);
+  // round to 0.5
+  return Math.round(hrs * 2) / 2;
 }
 
-function maturitySummary(score: number): string {
+function maturityDetail(score: number): string {
   const v = Math.round(score);
-  if (v <= 2) return 'Little or no employees using AI for tasks; no guidance or policy.';
-  if (v <= 4) return 'A few individuals experiment; ad-hoc wins; no shared prompts.';
-  if (v <= 6) return 'Some teams using AI weekly; early playbooks; limited measurement.';
-  if (v <= 8) return 'AI embedded in key workflows; prompt libraries; KPIs tracked monthly.';
-  return 'AI fully embedded across workflows; champions network; ROI reviewed quarterly.';
+  if (v <= 2) return 'Early stage: ad-hoc experimentation; big wins from prompt basics and workflow mapping.';
+  if (v <= 4) return 'Isolated champions; introduce templates, shared prompt library, and QA gates.';
+  if (v <= 6) return 'Growing adoption; standardize tool stack, add measurement, and weekly enablement rituals.';
+  if (v <= 8) return 'Operationalized; embed AI in SOPs, connect to data sources, track KPIs monthly.';
+  return 'Best-in-class; scale champions network, role-specific playbooks, quarterly ROI reviews.';
 }
 
 export function RoiCalculator() {
@@ -91,14 +95,17 @@ export function RoiCalculator() {
   const [trainingPerEmployee, setTrainingPerEmployee] = useState<number>(850);
   const [durationMonths, setDurationMonths] = useState<number>(3);
 
+  // adjust derived defaults on team/maturity changes
   useEffect(() => {
-    if (!userTouchedHours.current) setHoursSavedPerWeek(suggestHours(team, maturityScore));
+    if (!userTouchedHours.current) {
+      setHoursSavedPerWeek(suggestedHoursFromMaturity(team, maturityScore));
+    }
     setBaselineTurnoverPct(teamPresets(team).baselineTurnoverPct);
   }, [team]);
 
   useEffect(() => {
     if (!userTouchedHours.current) {
-      setHoursSavedPerWeek(suggestHours(team, maturityScore));
+      setHoursSavedPerWeek(suggestedHoursFromMaturity(team, maturityScore));
     }
   }, [maturityScore, team]);
 
@@ -129,6 +136,7 @@ export function RoiCalculator() {
       maximumFractionDigits: 0,
     }).format(n);
 
+  // Stepper (unchanged)
   const Stepper = () => {
     const labels = [
       'Basics',
@@ -202,10 +210,11 @@ export function RoiCalculator() {
     }
   };
 
+  /** Roomy maturity scale on its own line */
   const MaturityScale = () => (
     <div>
       <label className="label">AI Maturity (1–10)</label>
-      <div className="maturity-scale">
+      <div className="maturity-scale" role="group" aria-label="AI maturity scale">
         {Array.from({ length: 10 }).map((_, i) => {
           const val = i + 1;
           const active = val === maturityScore;
@@ -216,15 +225,20 @@ export function RoiCalculator() {
               className={`n ${active ? 'active' : ''}`}
               onClick={() => setMaturityScore(val)}
               aria-label={`Maturity ${val}`}
+              title={`Maturity ${val}`}
             >
               {val}
             </button>
           );
         })}
       </div>
-      <p className="help" style={{ marginTop: 6 }}>{maturitySummary(maturityScore)}</p>
+      <p className="help" style={{ marginTop: 8 }}>{maturityDetail(maturityScore)}</p>
     </div>
   );
+
+  // quick productivity figures for blue box
+  const monthlyProd = (res.productivityAnnual || 0) / 12;
+  const annualProd = res.productivityAnnual || 0;
 
   return (
     <div className="section container">
@@ -239,7 +253,7 @@ export function RoiCalculator() {
           <div
             style={{
               display: 'grid',
-              gap: 12,
+              gap: 14,
               gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))',
             }}
           >
@@ -262,7 +276,7 @@ export function RoiCalculator() {
             </div>
             <CurrencySelect value={currency} onChange={setCurrency} />
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent:'flex-end' }}>
             <button className="btn btn-primary" onClick={() => setStep(2)}>
               Continue →
             </button>
@@ -270,29 +284,62 @@ export function RoiCalculator() {
         </div>
       )}
 
-      {/* 2 MATURITY + PRODUCTIVITY (merged) */}
+      {/* 2 MATURITY + PRODUCTIVITY (merged, with blue highlight) */}
       {step === 2 && (
         <div className="card">
           <h3>
             <IconGauge /> AI maturity &nbsp; <IconClock /> Productivity
           </h3>
-          <div style={{display:'grid', gap:14, gridTemplateColumns:'1.2fr 1fr'}}>
-            <div>
-              <MaturityScale />
-            </div>
-            <div>
-              <NumberField
-                label="Hours saved per person per week"
-                value={hoursSavedPerWeek}
-                onChange={(n) => { userTouchedHours.current = true; setHoursSavedPerWeek(n); }}
-                min={0}
-                step={0.5}
-                suffix="hrs/week"
-                hint="Auto-suggested from maturity + team. You can override."
-              />
+
+          {/* Maturity on its own full row */}
+          <div style={{marginBottom:12}}>
+            <MaturityScale />
+          </div>
+
+          {/* Separate row for hours input so it doesn't feel cramped */}
+          <div style={{display:'grid', gap:14, gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))'}}>
+            <NumberField
+              label="Hours saved per person per week"
+              value={hoursSavedPerWeek}
+              onChange={(n) => { userTouchedHours.current = true; setHoursSavedPerWeek(n); }}
+              min={0}
+              step={0.5}
+              suffix="hrs/week"
+              hint="Auto-suggested from maturity + team. You can override."
+            />
+            <NumberField
+              label={`Average annual salary (${S})`}
+              value={avgSalary}
+              onChange={setAvgSalary}
+              step={1000}
+            />
+            <NumberField
+              label="Employees in scope"
+              value={employees}
+              onChange={setEmployees}
+              min={1}
+            />
+          </div>
+
+          {/* Blue highlight box with big numbers */}
+          <div className="highlight">
+            <div className="row">
+              <div className="item">
+                <div className="t">Hours saved / year (team)</div>
+                <div className="v">{Math.round(res.hoursTotalYear).toLocaleString()}</div>
+              </div>
+              <div className="item">
+                <div className="t">Productivity value / month</div>
+                <div className="v">{money(monthlyProd)}</div>
+              </div>
+              <div className="item">
+                <div className="t">Productivity value / year</div>
+                <div className="v">{money(annualProd)}</div>
+              </div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent:'space-between' }}>
             <button className="btn btn-ghost" onClick={() => setStep(1)}>
               ← Back
             </button>
@@ -303,12 +350,15 @@ export function RoiCalculator() {
         </div>
       )}
 
-      {/* 3 TEAM & COST */}
+      {/* 3 TEAM & COST (kept for flow; now lighter since moved some fields up) */}
       {step === 3 && (
         <div className="card">
           <h3>
-            <IconMoney /> Team size & cost
+            <IconMoney /> Team & Cost (optional adjustments)
           </h3>
+          <p className="help" style={{marginTop:0}}>
+            You’ve already set team size and salary above. Adjust here if needed.
+          </p>
           <div
             style={{
               display: 'grid',
@@ -329,10 +379,7 @@ export function RoiCalculator() {
               step={1000}
             />
           </div>
-          <p className="help" style={{ marginTop: 8 }}>
-            If multiple teams, use weighted averages.
-          </p>
-          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent:'space-between' }}>
             <button className="btn btn-ghost" onClick={() => setStep(2)}>
               ← Back
             </button>
@@ -378,7 +425,7 @@ export function RoiCalculator() {
               hint="Common rule: ~50% of salary (recruiting, onboarding, lost productivity)."
             />
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent:'space-between' }}>
             <button className="btn btn-ghost" onClick={() => setStep(3)}>
               ← Back
             </button>
@@ -404,7 +451,7 @@ export function RoiCalculator() {
           <p className="help" style={{ marginTop: 6 }}>
             We’ll tailor the summary and next steps to these priorities.
           </p>
-          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent:'space-between' }}>
             <button className="btn btn-ghost" onClick={() => setStep(4)}>
               ← Back
             </button>
@@ -434,8 +481,15 @@ export function RoiCalculator() {
               onChange={setTrainingPerEmployee}
               step={25}
             />
+            <NumberField
+              label="Program duration (months)"
+              value={durationMonths}
+              onChange={setDurationMonths}
+              min={1}
+              step={1}
+            />
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent:'space-between' }}>
             <button className="btn btn-ghost" onClick={() => setStep(5)}>
               ← Back
             </button>
@@ -446,32 +500,8 @@ export function RoiCalculator() {
         </div>
       )}
 
-      {/* 7 DURATION */}
+      {/* 7 RESULTS */}
       {step === 7 && (
-        <div className="card">
-          <h3>
-            <IconClock /> Duration
-          </h3>
-          <NumberField
-            label="Program duration (months)"
-            value={durationMonths}
-            onChange={setDurationMonths}
-            min={1}
-            step={1}
-          />
-          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-            <button className="btn btn-ghost" onClick={() => setStep(6)}>
-              ← Back
-            </button>
-            <button className="btn btn-primary" onClick={() => setStep(8)}>
-              Calculate →
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 8 RESULTS */}
-      {step === 8 && (
         <div className="card">
           <h3>Results</h3>
           <div className="kpi-grid">
@@ -511,19 +541,21 @@ export function RoiCalculator() {
 
           <NextSteps pains={pains} />
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap', justifyContent:'space-between' }}>
             <button className="btn btn-primary" onClick={openPrintView}>
               Open Print View / PDF
             </button>
-            <button className="btn btn-light" onClick={downloadCSV}>
-              Download CSV
-            </button>
-            <button className="btn btn-ghost" onClick={copyShareLink}>
-              Copy Share Link
-            </button>
-            <button className="btn btn-ghost" onClick={() => setStep(1)}>
-              Start over
-            </button>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+              <button className="btn btn-light" onClick={downloadCSV}>
+                Download CSV
+              </button>
+              <button className="btn btn-ghost" onClick={copyShareLink}>
+                Copy Share Link
+              </button>
+              <button className="btn btn-ghost" onClick={() => setStep(1)}>
+                Start over
+              </button>
+            </div>
           </div>
         </div>
       )}
