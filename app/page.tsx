@@ -107,7 +107,7 @@ export default function Home() {
   const money = (n:number) =>
     new Intl.NumberFormat('en', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n);
 
-  /** ——— Inline styles (so it renders correctly without CSS files) ——— */
+  /** ——— Inline styles ——— */
   const container = { maxWidth: 1120, margin: '0 auto', padding: '0 20px' } as const;
   const card = { background: '#fff', border: '1px solid #E7ECF7', borderRadius: 16, boxShadow: '0 10px 28px rgba(12,20,38,.08)', padding: 18, maxWidth: 980, margin: '16px auto' } as const;
   const h3 = { margin: '0 0 .7rem', fontSize: '1.06rem', fontWeight: 900 } as const;
