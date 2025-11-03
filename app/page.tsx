@@ -3,8 +3,42 @@
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-import { useMemo, useRef, useState, useEffect } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 
+/** -------------------- Error Boundary -------------------- */
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { err?: Error }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { err: undefined };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { err: error };
+  }
+  componentDidCatch(error: Error, info: any) {
+    // surface to console as well
+    // eslint-disable-next-line no-console
+    console.error('Calculator crashed:', error, info);
+  }
+  render() {
+    if (this.state.err) {
+      return (
+        <main style={{ maxWidth: 920, margin: '24px auto', padding: '0 20px' }}>
+          <div style={{ background:'#fff5f5', border:'1px solid #ffd6d6', color:'#7a1f1f', borderRadius:12, padding:16 }}>
+            <h2 style={{ marginTop:0 }}>Something went wrong</h2>
+            <p>This panel is here so we never get a blank screen. Error details:</p>
+            <pre style={{ whiteSpace:'pre-wrap' }}>
+{String(this.state.err?.message || this.state.err)}
+            </pre>
+            <p>Check the browser console for stack trace.</p>
+          </div>
+        </main>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+/** -------------------- Types & Options -------------------- */
 type Team = 'all'|'hr'|'ops'|'marketing'|'sales'|'support'|'product';
 type Currency = 'EUR'|'USD'|'GBP';
 type Pain = 'retention'|'engagement'|'quality'|'throughput'|'onboarding'|'cost';
@@ -28,52 +62,69 @@ const PAIN_OPTS: {label:string; value:Pain}[] = [
   { label: 'Cost reduction', value: 'cost' },
 ];
 
+/** -------------------- Helpers -------------------- */
 const symbol = (c: Currency) => (c === 'EUR' ? '€' : c === 'USD' ? '$' : '£');
 
 function suggestedHours(team: Team, score: number) {
   const s = Math.max(1, Math.min(10, score));
-  const base = 5 - ((s - 1) * (4 / 9)); // 5..1
+  const base = 5 - ((s - 1) * (4 / 9)); // 5..1 as maturity increases
   const teamAdj = team === 'support' ? 0.5 : team === 'product' ? -0.5 : 0;
   const hrs = Math.max(0.5, base + teamAdj);
   return Math.round(hrs * 2) / 2;
 }
+
 function maturityDetail(score: number) {
   const v = Math.round(score);
-  if (v <= 2) return 'Early stage: ad-hoc experiments; big wins from prompt basics + workflow mapping.';
-  if (v <= 4) return 'Isolated champions; introduce templates, shared prompt library, and QA gates.';
-  if (v <= 6) return 'Growing adoption; standardize stack, add measurement, weekly enablement rituals.';
-  if (v <= 8) return 'Operationalized; embed AI in SOPs, connect to data, track KPIs monthly.';
+  if (v <= 2) return 'Early: ad-hoc experiments; big wins from prompt basics + workflow mapping.';
+  if (v <= 4) return 'Isolated champions; add templates, prompt lib, and QA gates.';
+  if (v <= 6) return 'Growing adoption; standardize stack, measure usage, weekly enablement.';
+  if (v <= 8) return 'Operationalized; embed in SOPs, connect data, track KPIs monthly.';
   return 'Best-in-class; scale champions, role playbooks, quarterly ROI reviews.';
 }
 
 function calcProductivityAnnual(avgSalary:number, hoursPerWeek:number, employees:number) {
   const hourly = avgSalary / (52 * 40);
-  const util = 0.7;
+  const util = 0.7; // realizable factor
   const totalHours = hoursPerWeek * 52 * employees;
   return hourly * util * totalHours;
 }
+
 function calcRetentionValue(avgSalary:number, employees:number, baselineTurnoverPct:number, improvementPct:number, replacementCostFactor:number) {
   const avoided = employees * (baselineTurnoverPct/100) * (improvementPct/100);
   const replaceCost = avgSalary * replacementCostFactor;
   return avoided * replaceCost;
 }
 
-export default function Home() {
+/** -------------------- Main Page -------------------- */
+export default function Page() {
+  return (
+    <ErrorBoundary>
+      <Calculator />
+    </ErrorBoundary>
+  );
+}
+
+/** -------------------- Calculator -------------------- */
+function Calculator() {
   const [step, setStep] = useState(1);
 
+  // Step 1 — Audience
   const [currency, setCurrency] = useState<Currency>('EUR');
   const [team, setTeam] = useState<Team>('all');
   const [employees, setEmployees] = useState<number>(150);
   const [pains, setPains] = useState<Pain[]>([]);
 
+  // Step 2 — Benchmark
   const [maturityScore, setMaturityScore] = useState<number>(5);
   const [hoursSavedPerWeek, setHoursSavedPerWeek] = useState<number>(3);
   const userTouchedHours = useRef(false);
 
+  // Step 3 — Retention
   const [baselineTurnoverPct, setBaselineTurnoverPct] = useState<number>(20);
   const [turnoverImprovementPct, setTurnoverImprovementPct] = useState<number>(10);
   const [replacementCostFactor, setReplacementCostFactor] = useState<number>(0.5);
 
+  // Step 4 — Training & Duration
   const [trainingPerEmployee, setTrainingPerEmployee] = useState<number>(850);
   const [avgSalary, setAvgSalary] = useState<number>(52000);
   const [durationMonths, setDurationMonths] = useState<number>(3);
@@ -99,6 +150,7 @@ export default function Home() {
   const money = (n:number) =>
     new Intl.NumberFormat('en', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n);
 
+  /** Inline styles */
   const container = { maxWidth: 1120, margin: '0 auto', padding: '0 20px' } as const;
   const card = { background: '#fff', border: '1px solid #E7ECF7', borderRadius: 16, boxShadow: '0 10px 28px rgba(12,20,38,.08)', padding: 18, maxWidth: 980, margin: '16px auto' } as const;
   const h3 = { margin: '0 0 .7rem', fontSize: '1.06rem', fontWeight: 900 } as const;
@@ -126,8 +178,10 @@ export default function Home() {
   const labels = ['Audience','AI Benchmark','Retention','Training & Duration','Results'];
   const pct = Math.min((step - 1) / (labels.length - 1), 1);
 
+  /** Render */
   return (
     <main style={container}>
+      {/* Slim hero */}
       <section style={card}>
         <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900 }}>AI at Work — Human Productivity ROI</h1>
         <p style={{ marginTop: 6, color: '#667085' }}>
@@ -142,6 +196,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Stepper */}
       <section style={{ ...card, padding: 12 }}>
         <div style={{ height: 10, background: '#E9EDFB', borderRadius: 999, overflow: 'hidden' }}>
           <span style={{ display: 'block', height: '100%', width: `${pct*100}%`, background: 'linear-gradient(90deg,#6D8BFF,#3366FE)' }} />
@@ -162,6 +217,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* STEP 1 */}
       {step === 1 && (
         <section style={card}>
           <h3 style={h3}>Audience</h3>
@@ -236,6 +292,7 @@ export default function Home() {
         </section>
       )}
 
+      {/* STEP 2 */}
       {step === 2 && (
         <section style={card}>
           <h3 style={h3}>AI Benchmark</h3>
@@ -254,6 +311,7 @@ export default function Home() {
                         setMaturityScore(val);
                         if (!userTouchedHours.current) setHoursSavedPerWeek(suggestedHours(team, val));
                       }}
+                      title={`Maturity ${val}`}
                       style={{
                         width:40, height:40, borderRadius:12, fontWeight:900, cursor:'pointer',
                         border:'1px solid #E7ECF7',
@@ -269,7 +327,7 @@ export default function Home() {
               </div>
               <p style={{...help, marginTop:8}}>{maturityDetail(maturityScore)}</p>
 
-              <div style={gridAuto as any}>
+              <div style={gridAuto}>
                 <div>
                   <label style={label}>Hours saved per person per week (override)</label>
                   <input type="number" min={0} step={0.5} value={hoursSavedPerWeek}
@@ -281,9 +339,15 @@ export default function Home() {
               </div>
             </div>
 
-            <div style={highlight}>
+            {/* Blue KPI box */}
+            <div style={{
+              marginTop: 4, borderRadius: 14, padding: 14, color: '#fff',
+              border: '1px solid rgba(255,255,255,.35)',
+              background: 'linear-gradient(135deg, #4B6FFF, #3366FE)',
+              boxShadow: '0 12px 30px rgba(15,42,120,.25)', width: '100%'
+            }}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
-                <div style={{ fontWeight: 900 }}>Estimated Hours Saved</div>
+                <div style={{ fontWeight: 900, letterSpacing: '-.01em' }}>Estimated Hours Saved</div>
                 <div style={{ padding:'6px 10px', borderRadius:999, border:'1px solid rgba(255,255,255,.4)', background:'rgba(255,255,255,.15)', fontWeight:900 }}>Live</div>
               </div>
 
@@ -308,6 +372,7 @@ export default function Home() {
         </section>
       )}
 
+      {/* STEP 3 */}
       {step === 3 && (
         <section style={card}>
           <h3 style={h3}>Retention</h3>
@@ -323,6 +388,7 @@ export default function Home() {
         </section>
       )}
 
+      {/* STEP 4 */}
       {step === 4 && (
         <section style={card}>
           <h3 style={h3}>Training & Duration</h3>
@@ -338,6 +404,7 @@ export default function Home() {
         </section>
       )}
 
+      {/* STEP 5 */}
       {step === 5 && (
         <section style={card}>
           <h3 style={h3}>Results</h3>
@@ -357,13 +424,15 @@ export default function Home() {
         </section>
       )}
 
+      {/* Diagnostic footer to confirm fresh build */}
       <section style={{ textAlign:'center', color:'#667085', fontSize:12, padding:'8px 0 24px' }}>
-        Inline UI • No CSS dependencies • {new Date().toISOString()}
+        Build: {new Date().toISOString()}
       </section>
     </main>
   );
 }
 
+/** -------------------- Small UI bits -------------------- */
 function FieldNumber({
   label, value, onChange, min, step, suffix, hint
 }: {
