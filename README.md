@@ -1,8 +1,16 @@
-# AI at Work — Human Productivity ROI (People-First)
+# Brainster — AI at Work ROI
 
-A 4-step ROI wizard (Next.js + Tailwind + TS) that estimates the **AI Dividend** from **upskilling employees**, not replacing them. Includes an **AI maturity** baseline so results are **incremental vs. today**.
+Zero-dependency Next.js (App Router) app. All styling inline so Vercel never serves stale CSS.
 
-## Quick start
-```bash
+## Run locally
 npm i
-npm run dev   # http://localhost:3000
+npm run dev
+
+## Deploy
+- Commit to `main` (GitHub)
+- Vercel will auto-build
+
+## Troubleshooting
+- If Vercel logs reference old imports (e.g., `decodeInputs`), you’re deploying an older commit.
+- Ensure the latest commit includes changes to `app/page.tsx` and `app/report/page.tsx`.
+- Search for duplicate routes: `src/app/report/page.tsx`, `pages/report.tsx`, or `app/(...)/report/page.tsx` and delete them.
